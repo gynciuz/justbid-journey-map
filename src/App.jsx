@@ -240,10 +240,19 @@ function BigCurve({ steps, colors, activeId, onSelect }) {
 /* ═══════════════════════════════════════════════════════════════════════
    MAIN APP
    ═══════════════════════════════════════════════════════════════════════ */
+function parseHash() {
+  const hash = window.location.hash.replace("#", "");
+  if (!hash || hash === "gaps") return { view: "gaps", step: null };
+  const [v, s] = hash.split("/");
+  if (v === "pre" || v === "post") return { view: v, step: s || null };
+  return { view: "gaps", step: null };
+}
+
 export default function App() {
-  const [view, setView] = useState("gaps");
-  const [homeFlow, setHomeFlow] = useState("post");
-  const [activeStep, setActiveStep] = useState(null);
+  const initial = parseHash();
+  const [view, setView] = useState(initial.view);
+  const [homeFlow, setHomeFlow] = useState(initial.view === "pre" || initial.view === "post" ? initial.view : "post");
+  const [activeStep, setActiveStep] = useState(initial.step);
   const [hovered, setHovered] = useState(null);
 
   const blueprintRef = useRef(null);
@@ -302,6 +311,25 @@ export default function App() {
       }
     }
   }, [flow, activeStep]);
+
+  useEffect(() => {
+    if (view === "gaps") {
+      window.history.replaceState(null, "", "#gaps");
+    } else if (view === "pre" || view === "post") {
+      const slug = activeStep ? `${view}/${activeStep}` : view;
+      window.history.replaceState(null, "", `#${slug}`);
+    }
+  }, [view, activeStep]);
+
+  useEffect(() => {
+    const onHashChange = () => {
+      const { view: v, step: s } = parseHash();
+      setView(v);
+      setActiveStep(s);
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
 
   const touchStart = useRef(null);
   const handleTouchStart = (e) => { touchStart.current = e.touches[0].clientX; };
