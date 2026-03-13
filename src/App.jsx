@@ -750,10 +750,11 @@ export default function App() {
                     {gap ? (
                       <div>
                         <div style={{ height:2,background:SC[gap.severity],marginBottom:10,borderRadius:1 }} />
-                        <div style={{ display:"flex",alignItems:"baseline",gap:8 }}>
+                        <div style={{ display:"flex",alignItems:"baseline",gap:8,marginBottom:6 }}>
                           <span style={{ fontSize:24,fontWeight:800,color:SC[gap.severity],lineHeight:1 }}>G{gap.rank}</span>
                           <p style={{ fontSize:14,fontWeight:600,color:"#F7FAFC",margin:0,lineHeight:1.4 }}>{gap.title}</p>
                         </div>
+                        <p style={{ fontSize:13,color:"#A0AEC0",margin:0,lineHeight:1.5 }}>{gap.evidence}</p>
                       </div>
                     ) : (
                       <span style={{ fontSize:13,color:"#787870" }}>—</span>
