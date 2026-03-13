@@ -46,7 +46,7 @@ const FLOWS = [
         { id:"book_slot", title:"Book Time Slot", desc:"Reserve a 15-min slot up to 2 business days ahead. Only 1 active appointment allowed. Selecting which orders to pick up changes available days. Slot availability varies daily — some days have zero slots.", icon:CircleDot, feeling:-0.5, personaA:"Picked a slot, 1hr cutoff fine", personaB:"Calendar changed when I selected my orders? Only 1 appointment? Some days have no slots at all?", feedback:{text:"Improved scheduling. Cutoff rules still surprise. Calendar behavior confusing.", desc:"App Store reviews note that slot booking improved significantly over previous versions. However, cutoff rules (1hr for ≤20 items, 2hr for ≤100) still catch users by surprise. The calendar shifts when different orders are selected — a counterintuitive UX that repeatedly confuses first-time bookers. Client reports: customers don't scroll to bottom to select all invoices — they schedule per-invoice via the card button. Calendar behavior when selecting orders is confusing. When rescheduling, orders sometimes don't carry over. The '2 days in advance' rule doesn't match user expectations (e.g. Monday for Wednesday)."}, competitor:"BOPIS: all rules before selection.", ux:{text:"Show all rules before selection. Preview calendar impact when selecting orders. Allow rescheduling from same screen.", desc:"Display cutoffs, no-show policy, slot counts upfront. Live preview of how order selection changes available dates. Additional: surface 'You have X pending invoices' banner at top of scheduling screen. Show invoice summary on reschedule confirmation to prevent order loss. Note: appointment confirmation already includes Google Maps link — missing is warehouse entrance photo and parking directions.", type:"Baseline"}, biz:{text:"15 min grace period for no-shows. Surface slot availability forecast.", desc:"Allow 15 min late arrival before no-show. Show slot availability forecast to reduce last-minute pressure", type:"Expected"}, frontstage:"15-min slots. 'Schedule between 1 hour and 2 days ahead' rule shown on screen. 1 active appointment. Unavailable slots marked with X (past cutoff) but no explanation why. Invoice selection at bottom of slot list (below fold — users miss it). Reschedule via 'Change time' button. Cancel via confirmation dialog ('Are you sure?') with no penalty warning. Calendar per-location via dropdown (6+ locations).", backstage:"30–40 per slot. Cutoff: ≤20=1h, ≤100=2h, 300+=3h. No-show 30min→cancel. Orders 1–500 items. Variable daily slot capacity. Cancel has no penalty. No-show policy exists but cancel flow doesn't reference it. Reschedule shows time slots only — may not properly re-link all selected invoices (client-reported bug).", support:"Capacity counter. Cutoff algorithm. Auto-cancel job. Extension logic. Reschedule API." },
         { id:"delegate_pickup", title:"Delegate Pickup", desc:"Send a unique link to someone else to collect on your behalf — 7-day validity", icon:Share2, feeling:-0.5, personaA:"Sent link, friend accepted in 2 min", personaB:"Does friend need account?", feedback:{text:"BBB: staff refused valid delegation.", desc:"Multiple BBB complaints describe staff refusing to honour valid delegation links, citing internal policies not reflected in the app. One reviewer reports driving 45 minutes only to be turned away despite having sent a valid delegation in advance."}, competitor:"Target, Apple: order confirmation + ID.", ux:{text:"Delegation QR visible to delegate + real-time status", desc:"Delegate gets own QR with live status. Both parties see confirmation. Staff sees verified delegation in POS", type:"Expected", gap:3}, biz:{text:"Sync to staff POS. Training. Audit trail.", desc:"Push delegation data to warehouse POS in real-time. Mandatory training for all staff. Full audit trail", type:"Baseline"}, frontstage:"Unique link → register/login → accept. 7-day validity.", backstage:"Staff check own system. Delegation not always synced to POS.", support:"Delegation token system (7-day TTL). POS integration gap." },
       ]},
-      { id:"arrival", label:"Arriving & Queue", icon:Navigation, color:"#85aecf", steps:[
+      { id:"arrival", label:"Arriving & Queue", icon:Navigation, color:"#e0a868", steps:[
         { id:"geofence", title:"Geofence Trigger", desc:"App detects arrival via location and prompts queue entry", icon:MapPin, feeling:0.5, personaA:"Phone buzzed — I know where to go", personaB:"No notification, where do I check in?", feedback:{text:"Works when enabled. Many don't grant location.", desc:"MoneyAt30 reviewer notes the geofence works well when location is enabled, but many users never grant location permission. When absent, there is no fallback — users must find the QR screen independently with no in-app guidance on where it is."}, competitor:"Bluedot: Improves on-time prep. 'I'm here' fallback.", ux:{text:"Geofence + manual 'I'm arriving' button", desc:"Keep geofence for location-enabled users. Add prominent 'I'm arriving' button for everyone else", type:"Baseline"}, biz:null, frontstage:"If location on: push + CTA. If not: find QR independently.", backstage:"No pre-arrival prep. Picking starts only after queue join.", support:"Geofence service. Per-location radius. No prep workflow on arrival." },
         { id:"qr_scan", title:"QR Check-in", desc:"Scan QR code on warehouse TV screen to enter the pickup queue", icon:ScanLine, feeling:-0.5, personaA:"Found the TV with QR easily", personaB:"QR screen hard to find", feedback:{text:"Positive once found. Parking confusion.", desc:"MoneyAt30 and Wanderlog reviewers note the QR TV screen is easy to use once found, but first-timers report confusion in the parking lot. Multiple reviewers mention circling the lot before finding the entrance and check-in screen."}, competitor:"Walmart: numbered bays. KIOSK: self-service.", ux:{text:"Wayfinding in push notification", desc:"Include warehouse entrance photo, parking guidance, and QR screen location in the arrival notification", type:"Expected"}, biz:{text:"Numbered parking bays + signage", desc:"Number parking bays and add clear signage from lot to check-in. Low cost, high impact for first-timers", type:"Expected"}, frontstage:"Large TV with QR code at warehouse entrance/pickup zone. Scan — check-in + queue position. Simple layout: one entrance — pickup zone — fenced off beyond. Assistance desk nearby for payments, questions, returns (~5% of traffic).", backstage:"QR code displayed on large screen. Warehouse layout simple — single entrance, pickup zone immediately visible. Signage details vary by location.", support:"Rotating QR service. Kiosk display app. Queue entry API." },
         { id:"auth_check", title:"Auth Check", desc:"System verifies identity, delegations, and selects the right account", icon:ShieldCheck, feeling:0, personaA:"Straight through", personaB:"Account selection confusing", feedback:{text:"Staff inconsistency with delegation.", desc:"JustBid FAQ and BBB complaints both reference staff inconsistency with delegation verification. Some staff accept the delegation QR, others demand additional verification or refuse outright, citing internal guidelines not reflected in the app."}, competitor:"IKEA: no ID for low-value. Tiered verification.", ux:{text:"Auto-select when single active account", desc:"Skip account selection when only one has active orders. Auto-detect and pre-select delegated account", type:"Delighter"}, biz:{text:"Photo ID required for all pickups (per invoice policy)", desc:"Invoice states: 'Your valid photo ID is required for all order pickups to ensure the security and integrity of every transaction.' No tiered system — ID always required.", type:"Expected"}, frontstage:"System checks authorizations → account selector if needed.", backstage:"Auth flow: authorizations? → orders? → accounts? → select/auto.", support:"Auth API. Account-order mapping. Delegation lookup." },
@@ -66,7 +66,7 @@ const UX_IMPROVEMENTS = [
   // DO FIRST — high impact, low effort
   { id: 1, title: "Calendar day-type labels", desc: "Add '(Appointment)' / '(Walk-in)' / '(Both)' labels to calendar days on scheduling screen", quadrant: "do-first", impact: 0.94, effort: 0.12, source: ["customer", "client"], stepId: "choose_method", gapId: 5 },
   { id: 2, title: "Invoice select-all banner", desc: "'You have X pending invoices — select all?' above time slots. Users schedule per-invoice because selection is below fold", quadrant: "do-first", impact: 0.88, effort: 0.22, source: ["customer"], stepId: "book_slot", gapId: null },
-  { id: 3, title: "Pickup deadline reminders", desc: "Push notifications at 48h / 24h / 2h before expiry. $700+ losses reported", quadrant: "do-first", impact: 0.95, effort: 0.32, source: ["client"], stepId: "view_deadline", gapId: 2 },
+  { id: 3, title: "Pickup deadline reminders", desc: "Push notifications at 48h / 24h / 2h before expiry. $700+ losses reported", quadrant: "do-first", impact: 0.95, effort: 0.32, source: ["client", "backlog"], stepId: "view_deadline", gapId: 2 },
   { id: 4, title: "Queue time estimate", desc: "Show estimated minutes based on queue position + order size", quadrant: "do-first", impact: 0.84, effort: 0.40, source: ["client"], stepId: "queue_joined", gapId: 4 },
   { id: 5, title: "Reschedule order confirmation", desc: "Show invoice summary before confirming reschedule. Orders sometimes drop silently", quadrant: "do-first", impact: 0.78, effort: 0.16, source: ["customer"], stepId: "book_slot", gapId: 9 },
   { id: 6, title: "Warehouse delay notifications", desc: "Proactive push when warehouse is behind on appointments. Stops repeated QR scanning", quadrant: "do-first", impact: 0.74, effort: 0.36, source: ["customer"], stepId: "queue_joined", gapId: null },
@@ -75,10 +75,10 @@ const UX_IMPROVEMENTS = [
   { id: 9, title: "Slot opening time clarity", desc: "'Between 1 hour and 2 days' rule confusing on edge cases (Monday→Wednesday)", quadrant: "do-first", impact: 0.68, effort: 0.44, source: ["customer"], stepId: "book_slot", gapId: null },
   // BIG BETS — high impact, high effort
   { id: 10, title: "Total cost on bid button", desc: "Show bid + 15% premium + $2 fee + tax near bid button. 'Bid $3' actual cost ~$6.36", quadrant: "big-bet", impact: 0.94, effort: 0.62, source: ["ux-audit"], stepId: "learn_bidding", gapId: 1 },
-  { id: 11, title: "Auto-extend deadline", desc: "Auto-extend pickup deadline when no slots available. Client actively building this", quadrant: "big-bet", impact: 0.88, effort: 0.74, source: ["client"], stepId: "view_deadline", gapId: 2 },
+  { id: 11, title: "Auto-extend deadline", desc: "Auto-extend pickup deadline when no slots available. Client actively building this", quadrant: "big-bet", impact: 0.88, effort: 0.74, source: ["client", "backlog"], stepId: "view_deadline", gapId: 2 },
   { id: 12, title: "Scheduling wizard", desc: "One-page booking wizard replacing complex multi-screen flow with 10+ hidden rules", quadrant: "big-bet", impact: 0.95, effort: 0.86, source: ["ux-audit"], stepId: "understand_pickup", gapId: 5 },
   { id: 13, title: "Virtual queue", desc: "Check in once, wait anywhere, get notified when ready. Replaces QR polling pattern", quadrant: "big-bet", impact: 0.78, effort: 0.68, source: ["customer"], stepId: "queue_joined", gapId: 4 },
-  { id: 14, title: "Onboarding tour", desc: "First-run walkthrough for auction vs Last Chance + fee structure", quadrant: "big-bet", impact: 0.84, effort: 0.58, source: ["client"], stepId: "first_open", gapId: null },
+  { id: 14, title: "Onboarding tour", desc: "First-run walkthrough for auction vs Last Chance + fee structure", quadrant: "big-bet", impact: 0.84, effort: 0.58, source: ["client", "backlog"], stepId: "first_open", gapId: null },
   { id: 15, title: "Delegation POS sync", desc: "Push delegation data to warehouse POS in real-time + mandatory staff training", quadrant: "big-bet", impact: 0.72, effort: 0.80, source: ["ux-audit"], stepId: "delegate_pickup", gapId: 3 },
   { id: 16, title: "Auto-surface QR", desc: "Lock screen notification or Wallet pass when number is called — no app navigation", quadrant: "big-bet", impact: 0.70, effort: 0.56, source: ["ux-audit"], stepId: "show_qr", gapId: 7 },
   // QUICK FILLS — low impact, low effort
@@ -86,13 +86,13 @@ const UX_IMPROVEMENTS = [
   { id: 18, title: "Parking + entrance photo", desc: "Warehouse entrance photo in appointment confirmation. One-time upload per location", quadrant: "quick-fill", impact: 0.40, effort: 0.26, source: ["client"], stepId: "qr_scan", gapId: null },
   { id: 19, title: "Cancel penalty warning", desc: "Show consequences in cancel dialog instead of just 'Are you sure?'", quadrant: "quick-fill", impact: 0.32, effort: 0.18, source: ["ux-audit"], stepId: "book_slot", gapId: null },
   { id: 20, title: "Post-win FAQ block", desc: "Contextual FAQ on Wins screen. Rules at point of action, not in global FAQ", quadrant: "quick-fill", impact: 0.36, effort: 0.36, source: ["client"], stepId: "win_notification", gapId: null },
-  { id: 21, title: "'Appears New' label rollout", desc: "Finish replacing 'Condition: New' across all locations. Screenshots show incomplete", quadrant: "quick-fill", impact: 0.24, effort: 0.08, source: ["screenshots"], stepId: "receive_items", gapId: null },
+  { id: 21, title: "'Appears New' label rollout", desc: "Finish replacing 'Condition: New' across all locations. Screenshots show incomplete", quadrant: "quick-fill", impact: 0.24, effort: 0.08, source: ["screenshots", "backlog"], stepId: "receive_items", gapId: null },
   { id: 22, title: "Map in push notification", desc: "Include navigation link in arrival push, not just in confirmation screen", quadrant: "quick-fill", impact: 0.26, effort: 0.30, source: ["ux-audit"], stepId: "geofence", gapId: null },
   // LATER — low impact, high effort
-  { id: 23, title: "Photos in invoice/receipt", desc: "Item photos at packing stage for receipt + dispute resolution", quadrant: "later", impact: 0.44, effort: 0.62, source: ["client"], stepId: "confirmation", gapId: null },
-  { id: 24, title: "Self-service returns", desc: "Returns flow in My Account. In backlog, keeps getting deprioritized", quadrant: "later", impact: 0.48, effort: 0.78, source: ["client"], stepId: "receive_items", gapId: 8 },
+  { id: 23, title: "Photos in invoice/receipt", desc: "Item photos at packing stage for receipt + dispute resolution", quadrant: "later", impact: 0.44, effort: 0.62, source: ["client", "backlog"], stepId: "confirmation", gapId: null },
+  { id: 24, title: "Self-service returns", desc: "Returns flow in My Account. In backlog, keeps getting deprioritized", quadrant: "later", impact: 0.48, effort: 0.78, source: ["client", "backlog"], stepId: "receive_items", gapId: 8 },
   { id: 25, title: "Busy time heatmap", desc: "Google-style busy hours on calendar. Needs historical data pipeline", quadrant: "later", impact: 0.36, effort: 0.72, source: ["ux-audit"], stepId: "choose_method", gapId: null },
-  { id: 26, title: "Last Chance countdown", desc: "Live timer + hourly price schedule for Last Chance items", quadrant: "later", impact: 0.42, effort: 0.88, source: ["client"], stepId: "learn_lastchance", gapId: null },
+  { id: 26, title: "Last Chance countdown", desc: "Live timer + hourly price schedule for Last Chance items", quadrant: "later", impact: 0.42, effort: 0.88, source: ["client", "backlog"], stepId: "learn_lastchance", gapId: null },
   { id: 27, title: "In-app issue reporting", desc: "Report issue button with photo upload at pickup. Needs new flow + backend", quadrant: "later", impact: 0.26, effort: 0.64, source: ["ux-audit"], stepId: "receive_items", gapId: 8 },
 ];
 
@@ -241,16 +241,52 @@ function BigCurve({ steps, colors, activeId, onSelect }) {
   }));
   let d = pts.length === 1 ? `M${pts[0].x},${pts[0].y}` :
     pts.reduce((a,p,i) => { if(!i) return `M${p.x},${p.y}`; const pv=pts[i-1], cx=(pv.x+p.x)/2; return `${a} C${cx},${pv.y} ${cx},${p.y} ${p.x},${p.y}`; },"");
+  // Build phase bands for under-curve gradient
+  const bands = [];
+  if (pts.length > 0) {
+    let start = 0;
+    for (let i = 1; i <= pts.length; i++) {
+      if (i === pts.length || colors[i] !== colors[start]) {
+        bands.push({ startIdx: start, endIdx: i - 1, color: colors[start] });
+        start = i;
+      }
+    }
+  }
+  const uid = React.useId();
   return (
     <svg width="100%" viewBox={`0 0 ${w} ${h}`} style={{ display:"block" }}>
+      <defs>
+        {bands.map((b,i) => (
+          <linearGradient key={`${uid}-fg-${i}`} id={`${uid}-fg-${i}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={b.color} stopOpacity=".12" /><stop offset="100%" stopColor={b.color} stopOpacity="0" />
+          </linearGradient>
+        ))}
+      </defs>
       <line x1={0} y1={h/2} x2={w} y2={h/2} stroke="#3e3e38" strokeWidth="1" strokeDasharray="4 4" />
       <text x={12} y={py+4} fill="#787870" fontSize="9" fontFamily="inherit">positive</text>
       <text x={12} y={h-py+4} fill="#787870" fontSize="9" fontFamily="inherit">negative</text>
-      <path d={d + ` L${pts[pts.length-1].x},${h} L${pts[0].x},${h} Z`} fill="url(#curveGrad)" />
+      {bands.map((b,i) => {
+        // Extend segment to midpoints with neighboring phases so there's no gap
+        const si = b.startIdx > 0 ? b.startIdx - 1 : b.startIdx;
+        const ei = b.endIdx < pts.length - 1 ? b.endIdx + 1 : b.endIdx;
+        const ePts = pts.slice(si, ei + 1);
+        // Compute midpoint-clipped x boundaries
+        const leftX = b.startIdx > 0 ? (pts[b.startIdx-1].x + pts[b.startIdx].x) / 2 : pts[b.startIdx].x;
+        const rightX = b.endIdx < pts.length - 1 ? (pts[b.endIdx].x + pts[b.endIdx+1].x) / 2 : pts[b.endIdx].x;
+        // Build curve through extended points
+        const segD = ePts.reduce((a,p,j) => {
+          if (!j) return `M${p.x},${p.y}`;
+          const pv = ePts[j-1], cx = (pv.x + p.x) / 2;
+          return `${a} C${cx},${pv.y} ${cx},${p.y} ${p.x},${p.y}`;
+        }, "");
+        return (
+          <g key={i}>
+            <clipPath id={`${uid}-clip-${i}`}><rect x={leftX} y={0} width={rightX - leftX} height={h} /></clipPath>
+            <path d={segD + ` L${ePts[ePts.length-1].x},${h} L${ePts[0].x},${h} Z`} fill={`url(#${uid}-fg-${i})`} clipPath={`url(#${uid}-clip-${i})`} />
+          </g>
+        );
+      })}
       <path d={d} fill="none" stroke="#9a9a92" strokeWidth="1.5" />
-      <defs><linearGradient id="curveGrad" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="#9a9a92" stopOpacity=".08" /><stop offset="100%" stopColor="#9a9a92" stopOpacity="0" />
-      </linearGradient></defs>
       {pts.map((p,i) => {
         const gap = UX_GAPS.find(g => g.stepId === p.id);
         const isActive = activeId === p.id;
@@ -280,9 +316,9 @@ function ImpactMatrix({ items, onSelect }) {
     "quick-fill": { color: "#378ADD", label: "Quick fills" },
     "later": { color: "#6e6e68", label: "Later" },
   };
-  const W = 800, H = 400, PAD = 40;
+  const W = 800, H = 400, PAD = 20;
   return (
-    <div style={{ padding: "24px 20px 16px", overflow: "hidden" }}>
+    <div style={{ padding: "24px 0 16px", overflow: "hidden" }}>
       <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block" }}>
         <rect x={PAD} y={0} width={(W-PAD)/2} height={H/2} fill="#64c8a0" opacity="0.04" />
         <rect x={PAD+(W-PAD)/2} y={0} width={(W-PAD)/2} height={H/2} fill="#BA7517" opacity="0.04" />
@@ -307,6 +343,7 @@ function ImpactMatrix({ items, onSelect }) {
               <circle cx={x} cy={y} r="14" fill={c} opacity="0.15" />
               <circle cx={x} cy={y} r="10" fill={c} />
               <text x={x} y={y + 4} textAnchor="middle" fill="#fff" fontSize="10" fontWeight="700" fontFamily="inherit">{item.id}</text>
+              <text x={x} y={y + 22} textAnchor="middle" fill="#B2BEC3" fontSize="7" fontFamily="inherit">{item.title}</text>
             </g>
           );
         })}
@@ -331,7 +368,7 @@ function IssueList({ items, onNavigate }) {
     "quick-fill": { color: "#378ADD", label: "Quick fills — low impact, low effort" },
     "later": { color: "#6e6e68", label: "Later — low impact, high effort" },
   };
-  const SRC_COLORS = { customer: "#FF8C69", client: "#64c8a0", "ux-audit": "#85aecf", screenshots: "#FFDAB9" };
+  const SRC_COLORS = { customer: "#FF8C69", client: "#64c8a0", "ux-audit": "#85aecf", screenshots: "#FFDAB9", backlog: "#c9a0dc" };
   const groups = ["do-first", "big-bet", "quick-fill", "later"];
   return (
     <div>
@@ -352,13 +389,13 @@ function IssueList({ items, onNavigate }) {
                   <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
                     <span style={{ fontSize: 13, fontWeight: 800, color: qc.color }}>#{item.id}</span>
                     <span style={{ fontSize: 14, fontWeight: 700, color: "#F7FAFC" }}>{item.title}</span>
-                    {item.gapId && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 4, background: "#ff635d18", color: "#ff635d", fontWeight: 600 }}>Gap #{item.gapId}</span>}
                   </div>
                   <p style={{ fontSize: 12, color: "#A0AEC0", margin: "0 0 8px", lineHeight: 1.5, flex: 1 }}>{item.desc}</p>
                   <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                     {item.source.map(s => (
                       <span key={s} style={{ fontSize: 9, padding: "1px 5px", borderRadius: 3, background: `${SRC_COLORS[s] || "#888"}18`, color: SRC_COLORS[s] || "#888", fontWeight: 600, textTransform: "uppercase" }}>{s}</span>
                     ))}
+                    {item.gapId && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 3, background: "#ff635d18", color: "#ff635d", fontWeight: 600, textTransform: "uppercase" }}>Gap #{item.gapId}</span>}
                   </div>
                 </div>
               ))}
@@ -384,7 +421,6 @@ function parseHash() {
 export default function App() {
   const initial = parseHash();
   const [view, setView] = useState(initial.view);
-  const [homeFlow, setHomeFlow] = useState(initial.view === "pre" || initial.view === "post" ? initial.view : "post");
   const [activeStep, setActiveStep] = useState(initial.step);
   const [hovered, setHovered] = useState(null);
 
@@ -520,35 +556,30 @@ export default function App() {
             <p style={{ fontSize:17, color:"#999990", margin:0 }}>Service blueprint · User research · Competitor analysis</p>
           </div>
 
-          {(() => {
-            const hf = FLOWS.find(f=>f.id===homeFlow);
-            const hPhases = hf ? hf.phases : [];
-            const hSteps = hPhases.flatMap(p => p.steps.map(s => ({...s, phaseColor:p.color, phaseLabel:p.label})));
-            const hColors = hPhases.flatMap(p => p.steps.map(() => p.color));
-            const criticalGaps = UX_GAPS.filter(g => g.severity === "Critical" && hf.phases.some(p => p.steps.some(s => s.id === g.stepId)));
-            const allCritical = UX_GAPS.filter(g => g.severity === "Critical");
-            const gapsToShow = criticalGaps.length > 0 ? criticalGaps : allCritical.slice(0, 3);
+          {FLOWS.map(fl => {
+            const phases = fl.phases;
+            const steps = phases.flatMap(p => p.steps.map(s => ({...s, phaseColor:p.color, phaseLabel:p.label})));
+            const colors = phases.flatMap(p => p.steps.map(() => p.color));
             return (
-              <div>
-                {/* Journey toggle */}
-                <div style={{ display:"flex", gap:4, marginBottom:32 }}>
-                  {FLOWS.map(f=>(
-                    <button key={f.id} onClick={()=>setHomeFlow(f.id)} style={{
-                      fontSize:15, fontWeight:700, padding:"10px 20px", borderRadius:10,
-                      border: homeFlow===f.id ? `2px solid ${f.accent}` : "2px solid #3e3e38",
-                      cursor:"pointer", fontFamily:"inherit",
-                      background: homeFlow===f.id ? `${f.accent}10` : "transparent",
-                      color: homeFlow===f.id ? f.accent : "#999990",
-                      transition:"all .2s", flex:1,
-                    }}>{f.title}</button>
-                  ))}
+              <div key={fl.id} style={{ marginBottom:32 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
+                  <fl.icon size={16} color={fl.accent} strokeWidth={1.6} />
+                  <span style={{ fontSize:15, fontWeight:700, color:fl.accent }}>{fl.title}</span>
+                  <button onClick={()=>{setView(fl.id);setActiveStep(null);}} style={{
+                    marginLeft:"auto", fontSize:13, fontWeight:600, padding:"5px 12px", borderRadius:8,
+                    background:"transparent", border:"1px solid #3e3e38", cursor:"pointer", fontFamily:"inherit",
+                    color:fl.accent, display:"flex", alignItems:"center", gap:4, transition:"all .2s",
+                  }}
+                    onMouseEnter={e=>e.currentTarget.style.background="#1e1e1c"}
+                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}
+                  >
+                    Explore <ArrowRight size={13} />
+                  </button>
                 </div>
-
-                {/* Hero curve */}
-                <div style={{ padding:"28px 20px 16px", marginBottom:32 }}>
-                  <BigCurve steps={hSteps} colors={hColors} activeId={null} onSelect={(id)=>{setView(hf.id);setActiveStep(id);}} />
+                <div style={{ padding:"16px 20px 12px" }}>
+                  <BigCurve steps={steps} colors={colors} activeId={null} onSelect={(id)=>{setView(fl.id);setActiveStep(id);}} />
                   <div style={{ display:"flex", justifyContent:"center", gap:16, marginTop:12 }}>
-                    {hPhases.map(ph=>(
+                    {phases.map(ph=>(
                       <div key={ph.id} style={{ display:"flex",alignItems:"center",gap:5 }}>
                         <div style={{ width:8,height:8,borderRadius:4,background:ph.color }} />
                         <span style={{ fontSize:12,color:"#999990" }}>{ph.label}</span>
@@ -556,85 +587,73 @@ export default function App() {
                     ))}
                   </div>
                 </div>
-
-                {/* Key issues */}
-                <div style={{ marginBottom:32 }}>
-                  <p style={{ fontSize:12, fontWeight:700, textTransform:"uppercase", letterSpacing:1.5, color:"#ff635d", marginBottom:16 }}>Key issues</p>
-                  <div className="journey-grid" style={{ gap:12 }}>
-                    {gapsToShow.map(gap => {
-                      const parentFlow = FLOWS.find(f => f.phases.some(p => p.steps.some(s => s.id === gap.stepId)));
-                      const step = hPhases.flatMap(p=>p.steps).find(s=>s.id===gap.stepId) || FLOWS.flatMap(f=>f.phases).flatMap(p=>p.steps).find(s=>s.id===gap.stepId);
-                      const sevColor = SC[gap.severity];
-                      return (
-                        <div key={gap.rank} onClick={()=>{if(parentFlow){setView(parentFlow.id);setTimeout(()=>scrollToGap(gap.stepId),100);}}}
-                          style={{ padding:"20px 24px", border:`1px solid ${sevColor}20`, borderRadius:14, cursor:"pointer", transition:"background .2s" }}
-                          onMouseEnter={e=>e.currentTarget.style.background="#1e1e1c"}
-                          onMouseLeave={e=>e.currentTarget.style.background="transparent"}
-                        >
-                          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
-                            <span style={{ fontSize:24, fontWeight:800, color:sevColor }}>{gap.rank}</span>
-                            <span style={{ fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:.8, padding:"2px 6px",borderRadius:4,background:`${sevColor}18`,color:sevColor }}>{gap.severity}</span>
-                            <div style={{flex:1}}/>
-                            <ArrowRight size={16} color="#999990" />
-                          </div>
-                          <p style={{ fontSize:18, fontWeight:700, color:"#F7FAFC", margin:"0 0 8px", lineHeight:1.4 }}>{gap.title}</p>
-                          <p style={{ fontSize:14, color:"#A0AEC0", margin:"0 0 12px", lineHeight:1.6 }}>{gap.evidence}</p>
-                          {step && step.ux && (
-                            <div style={{ padding:"8px 10px",background:"#85aecf08",borderRadius:8,marginBottom:8 }}>
-                              <p style={{ fontSize:12,fontWeight:600,color:"#85aecf",margin:"0 0 2px" }}>UX: {step.ux.text}</p>
-                              {step.ux.desc && <p style={{ fontSize:11,color:"#A0AEC0",margin:0,lineHeight:1.45 }}>{step.ux.desc}</p>}
-                            </div>
-                          )}
-                          {step && step.biz && (
-                            <div style={{ padding:"8px 10px",background:"#64c8a008",borderRadius:8,marginBottom:8 }}>
-                              <p style={{ fontSize:12,fontWeight:600,color:"#64c8a0",margin:"0 0 2px" }}>BIZ: {step.biz.text}</p>
-                              {step.biz.desc && <p style={{ fontSize:11,color:"#A0AEC0",margin:0,lineHeight:1.45 }}>{step.biz.desc}</p>}
-                            </div>
-                          )}
-                          {step && step.competitor && (
-                            <div style={{ padding:"8px 10px",background:"#FF8C6908",borderRadius:8 }}>
-                              <span style={{ fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,color:"#FF8C69" }}>Competitors</span>
-                              <p style={{ fontSize:12,color:"#A0AEC0",margin:"4px 0 0",lineHeight:1.45 }}>{step.competitor}</p>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Gaps matrix */}
-                <div style={{ marginBottom:32 }}>
-                  <p style={{ fontSize:12, fontWeight:700, textTransform:"uppercase", letterSpacing:1.5, color:"#999990", marginBottom:16 }}>Gaps matrix</p>
-                  <ImpactMatrix items={UX_IMPROVEMENTS} onSelect={(item) => {
-                    const parentFlow = FLOWS.find(f => f.phases.some(p => p.steps.some(s => s.id === item.stepId)));
-                    if (parentFlow) { setView(parentFlow.id); setTimeout(() => scrollToGap(item.stepId), 100); }
-                  }} />
-                </div>
-
-                {/* All improvements */}
-                <div style={{ marginBottom:32 }}>
-                  <p style={{ fontSize:12, fontWeight:700, textTransform:"uppercase", letterSpacing:1.5, color:"#999990", marginBottom:16 }}>All improvements</p>
-                  <IssueList items={UX_IMPROVEMENTS} onNavigate={(item) => {
-                    const parentFlow = FLOWS.find(f => f.phases.some(p => p.steps.some(s => s.id === item.stepId)));
-                    if (parentFlow) { setView(parentFlow.id); setTimeout(() => scrollToGap(item.stepId), 100); }
-                  }} />
-                </div>
-
-                {/* Explore full map */}
-                <button onClick={()=>{setView(hf.id);setActiveStep(null);}} style={{
-                  width:"100%", padding:"16px", background:"transparent", border:"1px solid #3e3e38", borderRadius:12,
-                  cursor:"pointer", fontFamily:"inherit", fontSize:15, fontWeight:600, color:hf.accent,
-                  display:"flex", alignItems:"center", justifyContent:"center", gap:8, transition:"all .2s",
-                }}
-                  onMouseEnter={e=>e.currentTarget.style.background="#1e1e1c"}
-                  onMouseLeave={e=>e.currentTarget.style.background="transparent"}
-                >
-                  Explore full {hf.title} map <ArrowRight size={16} />
-                </button>
               </div>
             );
-          })()}
+          })}
+
+          {/* Key issues */}
+          <div style={{ marginBottom:32 }}>
+            <p style={{ fontSize:12, fontWeight:700, textTransform:"uppercase", letterSpacing:1.5, color:"#ff635d", marginBottom:16 }}>Key issues</p>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12 }}>
+              {UX_GAPS.filter(g => g.severity === "Critical").map(gap => {
+                const parentFlow = FLOWS.find(f => f.phases.some(p => p.steps.some(s => s.id === gap.stepId)));
+                const step = FLOWS.flatMap(f=>f.phases).flatMap(p=>p.steps).find(s=>s.id===gap.stepId);
+                const sevColor = SC[gap.severity];
+                return (
+                  <div key={gap.rank} onClick={()=>{if(parentFlow){setView(parentFlow.id);setTimeout(()=>scrollToGap(gap.stepId),100);}}}
+                    style={{ padding:"20px 24px", border:`1px solid ${sevColor}20`, borderRadius:14, cursor:"pointer", transition:"background .2s" }}
+                    onMouseEnter={e=>e.currentTarget.style.background="#1e1e1c"}
+                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}
+                  >
+                    <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+                      <span style={{ fontSize:24, fontWeight:800, color:sevColor }}>{gap.rank}</span>
+                      <span style={{ fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:.8, padding:"2px 6px",borderRadius:4,background:`${sevColor}18`,color:sevColor }}>{gap.severity}</span>
+                      <div style={{flex:1}}/>
+                      <ArrowRight size={16} color="#999990" />
+                    </div>
+                    <p style={{ fontSize:18, fontWeight:700, color:"#F7FAFC", margin:"0 0 8px", lineHeight:1.4 }}>{gap.title}</p>
+                    <p style={{ fontSize:14, color:"#A0AEC0", margin:"0 0 12px", lineHeight:1.6 }}>{gap.evidence}</p>
+                    {step && step.ux && (
+                      <div style={{ padding:"8px 10px",background:"#85aecf08",borderRadius:8,marginBottom:8 }}>
+                        <p style={{ fontSize:12,fontWeight:600,color:"#85aecf",margin:"0 0 2px" }}>UX: {step.ux.text}</p>
+                        {step.ux.desc && <p style={{ fontSize:11,color:"#A0AEC0",margin:0,lineHeight:1.45 }}>{step.ux.desc}</p>}
+                      </div>
+                    )}
+                    {step && step.biz && (
+                      <div style={{ padding:"8px 10px",background:"#64c8a008",borderRadius:8,marginBottom:8 }}>
+                        <p style={{ fontSize:12,fontWeight:600,color:"#64c8a0",margin:"0 0 2px" }}>BIZ: {step.biz.text}</p>
+                        {step.biz.desc && <p style={{ fontSize:11,color:"#A0AEC0",margin:0,lineHeight:1.45 }}>{step.biz.desc}</p>}
+                      </div>
+                    )}
+                    {step && step.competitor && (
+                      <div style={{ padding:"8px 10px",background:"#FF8C6908",borderRadius:8 }}>
+                        <span style={{ fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,color:"#FF8C69" }}>Competitors</span>
+                        <p style={{ fontSize:12,color:"#A0AEC0",margin:"4px 0 0",lineHeight:1.45 }}>{step.competitor}</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Improvements matrix */}
+          <div style={{ marginBottom:32 }}>
+            <p style={{ fontSize:12, fontWeight:700, textTransform:"uppercase", letterSpacing:1.5, color:"#999990", marginBottom:16 }}>Improvements matrix</p>
+            <ImpactMatrix items={UX_IMPROVEMENTS} onSelect={(item) => {
+              const parentFlow = FLOWS.find(f => f.phases.some(p => p.steps.some(s => s.id === item.stepId)));
+              if (parentFlow) { setView(parentFlow.id); setTimeout(() => scrollToGap(item.stepId), 100); }
+            }} />
+          </div>
+
+          {/* All improvements */}
+          <div style={{ marginBottom:32 }}>
+            <p style={{ fontSize:12, fontWeight:700, textTransform:"uppercase", letterSpacing:1.5, color:"#999990", marginBottom:16 }}>All improvements</p>
+            <IssueList items={UX_IMPROVEMENTS} onNavigate={(item) => {
+              const parentFlow = FLOWS.find(f => f.phases.some(p => p.steps.some(s => s.id === item.stepId)));
+              if (parentFlow) { setView(parentFlow.id); setTimeout(() => scrollToGap(item.stepId), 100); }
+            }} />
+          </div>
         </div>
       )}
 
@@ -754,6 +773,8 @@ export default function App() {
               <div style={{ padding:"12px 14px",position:"sticky",left:0,background:"#262624",zIndex:50, width:110,minWidth:110,borderRight:"1px solid #3e3e38",fontSize:12,fontWeight:600, color:"#85aecf",textTransform:"uppercase",letterSpacing:1, display:"flex",alignItems:"center",gap:7 }}>Actions</div>
               {phases.map(ph=>ph.steps.map(st=>{
                 const ux=st.ux; const biz=st.biz;
+                const stepImprovements=UX_IMPROVEMENTS.filter(imp=>imp.stepId===st.id);
+                const QC_COLORS={"do-first":"#E24B4A","big-bet":"#BA7517","quick-fill":"#378ADD","later":"#6e6e68"};
                 return(
                   <div key={`actions-${st.id}`} onClick={()=>scrollToStep(st.id)} onMouseEnter={()=>setHovered(st.id)} onMouseLeave={()=>setHovered(null)}
                     style={{ ...cellStyle(st.id) }}>
@@ -770,7 +791,19 @@ export default function App() {
                           {biz.desc && <p style={{ fontSize:13,color:"#A0AEC0",margin:0,lineHeight:1.5 }}>{biz.desc}</p>}
                         </div>
                       )}
-                      {!ux&&!biz&&<span style={{ fontSize:13,color:"#787870" }}>—</span>}
+                      {stepImprovements.length>0&&stepImprovements.map(imp=>{
+                        const qc=QC_COLORS[imp.quadrant]||"#888";
+                        return(
+                          <div key={imp.id} style={{ padding:"8px 10px",background:`${qc}08`,borderRadius:8,borderLeft:`2px solid ${qc}` }}>
+                            <div style={{ display:"flex",alignItems:"center",gap:5,marginBottom:3 }}>
+                              <span style={{ fontSize:11,fontWeight:700,color:qc }}>#{imp.id}</span>
+                              <span style={{ fontSize:13,fontWeight:600,color:isActive(st.id)?"#E2E8F0":"#B2BEC3" }}>{imp.title}</span>
+                            </div>
+                            <p style={{ fontSize:12,color:"#A0AEC0",margin:0,lineHeight:1.45 }}>{imp.desc}</p>
+                          </div>
+                        );
+                      })}
+                      {!ux&&!biz&&!stepImprovements.length&&<span style={{ fontSize:13,color:"#787870" }}>—</span>}
                     </div>
                   </div>
                 );
@@ -786,7 +819,7 @@ export default function App() {
                   {phases.map(ph=>ph.steps.map(st=>(
                     <div key={`${row.key}-${st.id}`} onClick={()=>scrollToStep(st.id)} onMouseEnter={()=>setHovered(st.id)} onMouseLeave={()=>setHovered(null)}
                       style={{ ...cellStyle(st.id) }}>
-                      <p style={{ fontSize:16,color:isActive(st.id)?"#E2E8F0":"#9a9a92",margin:0,lineHeight:1.65 }}>{row.get(st)}</p>
+                      <p style={{ fontSize:14,color:isActive(st.id)?"#E2E8F0":"#9a9a92",margin:0,lineHeight:1.65 }}>{row.get(st)}</p>
                       <SourceTags stepId={st.id} rowKey={row.key} />
                     </div>
                   )))}
@@ -800,7 +833,7 @@ export default function App() {
                   {phases.map(ph=>ph.steps.map(st=>(
                     <div key={`${row.key}-${st.id}`} onClick={()=>scrollToStep(st.id)} onMouseEnter={()=>setHovered(st.id)} onMouseLeave={()=>setHovered(null)}
                       style={{ ...cellStyle(st.id) }}>
-                      <p style={{ fontSize:16,color:isActive(st.id)?"#E2E8F0":"#B2BEC3",margin:0,lineHeight:1.65 }}>{row.get(st)}</p>
+                      <p style={{ fontSize:14,color:isActive(st.id)?"#E2E8F0":"#B2BEC3",margin:0,lineHeight:1.65 }}>{row.get(st)}</p>
                       <SourceTags stepId={st.id} rowKey={row.key} />
                     </div>
                   )))}
