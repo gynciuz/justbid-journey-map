@@ -62,6 +62,40 @@ const FLOWS = [
   },
 ];
 
+const UX_IMPROVEMENTS = [
+  // DO FIRST — high impact, low effort
+  { id: 1, title: "Calendar day-type labels", desc: "Add '(Appointment)' / '(Walk-in)' / '(Both)' labels to calendar days on scheduling screen", quadrant: "do-first", impact: 0.94, effort: 0.12, source: ["customer", "client"], stepId: "choose_method", gapId: 5 },
+  { id: 2, title: "Invoice select-all banner", desc: "'You have X pending invoices — select all?' above time slots. Users schedule per-invoice because selection is below fold", quadrant: "do-first", impact: 0.88, effort: 0.22, source: ["customer"], stepId: "book_slot", gapId: null },
+  { id: 3, title: "Pickup deadline reminders", desc: "Push notifications at 48h / 24h / 2h before expiry. $700+ losses reported", quadrant: "do-first", impact: 0.95, effort: 0.32, source: ["client"], stepId: "view_deadline", gapId: 2 },
+  { id: 4, title: "Queue time estimate", desc: "Show estimated minutes based on queue position + order size", quadrant: "do-first", impact: 0.84, effort: 0.40, source: ["client"], stepId: "queue_joined", gapId: 4 },
+  { id: 5, title: "Reschedule order confirmation", desc: "Show invoice summary before confirming reschedule. Orders sometimes drop silently", quadrant: "do-first", impact: 0.78, effort: 0.16, source: ["customer"], stepId: "book_slot", gapId: 9 },
+  { id: 6, title: "Warehouse delay notifications", desc: "Proactive push when warehouse is behind on appointments. Stops repeated QR scanning", quadrant: "do-first", impact: 0.74, effort: 0.36, source: ["customer"], stepId: "queue_joined", gapId: null },
+  { id: 7, title: "Payment completion push", desc: "Push notification when overnight charge succeeds. Paid/Failed badges exist but no push", quadrant: "do-first", impact: 0.70, effort: 0.26, source: ["ux-audit"], stepId: "payment_process", gapId: 6 },
+  { id: 8, title: "Post-win next steps wizard", desc: "After winning: payment timeline → scheduling → deadline. Pure frontend CTA flow", quadrant: "do-first", impact: 0.70, effort: 0.08, source: ["ux-audit"], stepId: "win_notification", gapId: null },
+  { id: 9, title: "Slot opening time clarity", desc: "'Between 1 hour and 2 days' rule confusing on edge cases (Monday→Wednesday)", quadrant: "do-first", impact: 0.68, effort: 0.44, source: ["customer"], stepId: "book_slot", gapId: null },
+  // BIG BETS — high impact, high effort
+  { id: 10, title: "Total cost on bid button", desc: "Show bid + 15% premium + $2 fee + tax near bid button. 'Bid $3' actual cost ~$6.36", quadrant: "big-bet", impact: 0.94, effort: 0.62, source: ["ux-audit"], stepId: "learn_bidding", gapId: 1 },
+  { id: 11, title: "Auto-extend deadline", desc: "Auto-extend pickup deadline when no slots available. Client actively building this", quadrant: "big-bet", impact: 0.88, effort: 0.74, source: ["client"], stepId: "view_deadline", gapId: 2 },
+  { id: 12, title: "Scheduling wizard", desc: "One-page booking wizard replacing complex multi-screen flow with 10+ hidden rules", quadrant: "big-bet", impact: 0.95, effort: 0.86, source: ["ux-audit"], stepId: "understand_pickup", gapId: 5 },
+  { id: 13, title: "Virtual queue", desc: "Check in once, wait anywhere, get notified when ready. Replaces QR polling pattern", quadrant: "big-bet", impact: 0.78, effort: 0.68, source: ["customer"], stepId: "queue_joined", gapId: 4 },
+  { id: 14, title: "Onboarding tour", desc: "First-run walkthrough for auction vs Last Chance + fee structure", quadrant: "big-bet", impact: 0.84, effort: 0.58, source: ["client"], stepId: "first_open", gapId: null },
+  { id: 15, title: "Delegation POS sync", desc: "Push delegation data to warehouse POS in real-time + mandatory staff training", quadrant: "big-bet", impact: 0.72, effort: 0.80, source: ["ux-audit"], stepId: "delegate_pickup", gapId: 3 },
+  { id: 16, title: "Auto-surface QR", desc: "Lock screen notification or Wallet pass when number is called — no app navigation", quadrant: "big-bet", impact: 0.70, effort: 0.56, source: ["ux-audit"], stepId: "show_qr", gapId: 7 },
+  // QUICK FILLS — low impact, low effort
+  { id: 17, title: "In-context help popups", desc: "Tooltips at decision points: cutoff rules, booking window, no-show policy", quadrant: "quick-fill", impact: 0.44, effort: 0.12, source: ["ux-audit", "client"], stepId: "book_slot", gapId: null },
+  { id: 18, title: "Parking + entrance photo", desc: "Warehouse entrance photo in appointment confirmation. One-time upload per location", quadrant: "quick-fill", impact: 0.40, effort: 0.26, source: ["client"], stepId: "qr_scan", gapId: null },
+  { id: 19, title: "Cancel penalty warning", desc: "Show consequences in cancel dialog instead of just 'Are you sure?'", quadrant: "quick-fill", impact: 0.32, effort: 0.18, source: ["ux-audit"], stepId: "book_slot", gapId: null },
+  { id: 20, title: "Post-win FAQ block", desc: "Contextual FAQ on Wins screen. Rules at point of action, not in global FAQ", quadrant: "quick-fill", impact: 0.36, effort: 0.36, source: ["client"], stepId: "win_notification", gapId: null },
+  { id: 21, title: "'Appears New' label rollout", desc: "Finish replacing 'Condition: New' across all locations. Screenshots show incomplete", quadrant: "quick-fill", impact: 0.24, effort: 0.08, source: ["screenshots"], stepId: "receive_items", gapId: null },
+  { id: 22, title: "Map in push notification", desc: "Include navigation link in arrival push, not just in confirmation screen", quadrant: "quick-fill", impact: 0.26, effort: 0.30, source: ["ux-audit"], stepId: "geofence", gapId: null },
+  // LATER — low impact, high effort
+  { id: 23, title: "Photos in invoice/receipt", desc: "Item photos at packing stage for receipt + dispute resolution", quadrant: "later", impact: 0.44, effort: 0.62, source: ["client"], stepId: "confirmation", gapId: null },
+  { id: 24, title: "Self-service returns", desc: "Returns flow in My Account. In backlog, keeps getting deprioritized", quadrant: "later", impact: 0.48, effort: 0.78, source: ["client"], stepId: "receive_items", gapId: 8 },
+  { id: 25, title: "Busy time heatmap", desc: "Google-style busy hours on calendar. Needs historical data pipeline", quadrant: "later", impact: 0.36, effort: 0.72, source: ["ux-audit"], stepId: "choose_method", gapId: null },
+  { id: 26, title: "Last Chance countdown", desc: "Live timer + hourly price schedule for Last Chance items", quadrant: "later", impact: 0.42, effort: 0.88, source: ["client"], stepId: "learn_lastchance", gapId: null },
+  { id: 27, title: "In-app issue reporting", desc: "Report issue button with photo upload at pickup. Needs new flow + backend", quadrant: "later", impact: 0.26, effort: 0.64, source: ["ux-audit"], stepId: "receive_items", gapId: 8 },
+];
+
 const TC = { Delighter:{color:"#5cbcd4",icon:Sparkles}, Expected:{color:"#FFDAB9",icon:Target}, "Baseline":{color:"#64c8a0",icon:Zap} };
 const SC = { Critical:"#ff635d", High:"#FF8C69", Medium:"#FFDAB9" };
 
@@ -208,7 +242,7 @@ function BigCurve({ steps, colors, activeId, onSelect }) {
   let d = pts.length === 1 ? `M${pts[0].x},${pts[0].y}` :
     pts.reduce((a,p,i) => { if(!i) return `M${p.x},${p.y}`; const pv=pts[i-1], cx=(pv.x+p.x)/2; return `${a} C${cx},${pv.y} ${cx},${p.y} ${p.x},${p.y}`; },"");
   return (
-    <svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} style={{ display:"block" }}>
+    <svg width="100%" viewBox={`0 0 ${w} ${h}`} style={{ display:"block" }}>
       <line x1={0} y1={h/2} x2={w} y2={h/2} stroke="#3e3e38" strokeWidth="1" strokeDasharray="4 4" />
       <text x={12} y={py+4} fill="#787870" fontSize="9" fontFamily="inherit">positive</text>
       <text x={12} y={h-py+4} fill="#787870" fontSize="9" fontFamily="inherit">negative</text>
@@ -235,6 +269,105 @@ function BigCurve({ steps, colors, activeId, onSelect }) {
         );
       })}
     </svg>
+  );
+}
+
+/* ═══ IMPACT / EFFORT MATRIX ═══ */
+function ImpactMatrix({ items, onSelect }) {
+  const QC = {
+    "do-first": { color: "#E24B4A", label: "Do first" },
+    "big-bet": { color: "#BA7517", label: "Big bets" },
+    "quick-fill": { color: "#378ADD", label: "Quick fills" },
+    "later": { color: "#6e6e68", label: "Later" },
+  };
+  const W = 800, H = 400, PAD = 40;
+  return (
+    <div style={{ background: "#1e1e1c", border: "1px solid #3e3e38", borderRadius: 16, padding: "24px 20px 16px", overflow: "hidden" }}>
+      <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block" }}>
+        <rect x={PAD} y={0} width={(W-PAD)/2} height={H/2} fill="#64c8a0" opacity="0.04" />
+        <rect x={PAD+(W-PAD)/2} y={0} width={(W-PAD)/2} height={H/2} fill="#BA7517" opacity="0.04" />
+        <rect x={PAD} y={H/2} width={(W-PAD)/2} height={H/2} fill="#378ADD" opacity="0.04" />
+        <rect x={PAD+(W-PAD)/2} y={H/2} width={(W-PAD)/2} height={H/2} fill="#888780" opacity="0.04" />
+        <line x1={PAD} y1={H/2} x2={W} y2={H/2} stroke="#3e3e38" strokeWidth="1" />
+        <line x1={PAD+(W-PAD)/2} y1={0} x2={PAD+(W-PAD)/2} y2={H} stroke="#3e3e38" strokeWidth="1" />
+        <line x1={PAD} y1={0} x2={PAD} y2={H} stroke="#3e3e38" strokeWidth="1.5" />
+        <line x1={PAD} y1={H} x2={W} y2={H} stroke="#3e3e38" strokeWidth="1.5" />
+        <text x={PAD-8} y={H/2} textAnchor="middle" fill="#787870" fontSize="10" fontFamily="inherit" transform={`rotate(-90,${PAD-8},${H/2})`}>impact</text>
+        <text x={PAD+(W-PAD)/2} y={H+16} textAnchor="middle" fill="#787870" fontSize="10" fontFamily="inherit">effort</text>
+        <text x={PAD+12} y={16} fill="#64c8a0" fontSize="10" fontFamily="inherit" opacity="0.6">do first</text>
+        <text x={W-8} y={16} textAnchor="end" fill="#BA7517" fontSize="10" fontFamily="inherit" opacity="0.6">big bets</text>
+        <text x={PAD+12} y={H-8} fill="#378ADD" fontSize="10" fontFamily="inherit" opacity="0.6">quick fills</text>
+        <text x={W-8} y={H-8} textAnchor="end" fill="#888780" fontSize="10" fontFamily="inherit" opacity="0.6">later</text>
+        {items.map(item => {
+          const x = PAD + item.effort * (W - PAD);
+          const y = (1 - item.impact) * H;
+          const c = QC[item.quadrant]?.color || "#888";
+          return (
+            <g key={item.id} onClick={() => onSelect(item)} style={{ cursor: "pointer" }}>
+              <circle cx={x} cy={y} r="14" fill={c} opacity="0.15" />
+              <circle cx={x} cy={y} r="10" fill={c} />
+              <text x={x} y={y + 4} textAnchor="middle" fill="#fff" fontSize="10" fontWeight="700" fontFamily="inherit">{item.id}</text>
+            </g>
+          );
+        })}
+      </svg>
+      <div style={{ display: "flex", gap: 16, marginTop: 12, justifyContent: "center" }}>
+        {Object.entries(QC).map(([k, v]) => (
+          <div key={k} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <div style={{ width: 8, height: 8, borderRadius: 4, background: v.color }} />
+            <span style={{ fontSize: 11, color: "#999990" }}>{v.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ═══ ISSUE LIST ═══ */
+function IssueList({ items, onNavigate }) {
+  const QC = {
+    "do-first": { color: "#E24B4A", label: "Do first — high impact, low effort" },
+    "big-bet": { color: "#BA7517", label: "Big bets — high impact, high effort" },
+    "quick-fill": { color: "#378ADD", label: "Quick fills — low impact, low effort" },
+    "later": { color: "#6e6e68", label: "Later — low impact, high effort" },
+  };
+  const SRC_COLORS = { customer: "#FF8C69", client: "#64c8a0", "ux-audit": "#85aecf", screenshots: "#FFDAB9" };
+  const groups = ["do-first", "big-bet", "quick-fill", "later"];
+  return (
+    <div>
+      {groups.map(q => {
+        const group = items.filter(i => i.quadrant === q);
+        if (!group.length) return null;
+        const qc = QC[q];
+        return (
+          <div key={q} style={{ marginBottom: 24 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.2, color: qc.color, marginBottom: 10 }}>{qc.label}</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {group.map(item => (
+                <div key={item.id} onClick={() => onNavigate(item)}
+                  style={{ padding: "14px 18px", background: "#1e1e1c", border: `1px solid ${qc.color}18`, borderRadius: 12, cursor: "pointer", transition: "background .2s" }}
+                  onMouseEnter={e => e.currentTarget.style.background = "#262624"}
+                  onMouseLeave={e => e.currentTarget.style.background = "#1e1e1c"}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: qc.color, minWidth: 20 }}>#{item.id}</span>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: "#F7FAFC" }}>{item.title}</span>
+                    {item.gapId && <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, background: "#ff635d18", color: "#ff635d", fontWeight: 600 }}>Gap #{item.gapId}</span>}
+                    <div style={{ flex: 1 }} />
+                    <div style={{ display: "flex", gap: 4 }}>
+                      {item.source.map(s => (
+                        <span key={s} style={{ fontSize: 9, padding: "1px 5px", borderRadius: 3, background: `${SRC_COLORS[s] || "#888"}18`, color: SRC_COLORS[s] || "#888", fontWeight: 600, textTransform: "uppercase" }}>{s}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <p style={{ fontSize: 13, color: "#A0AEC0", margin: 0, lineHeight: 1.5 }}>{item.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -461,6 +594,24 @@ export default function App() {
                       );
                     })}
                   </div>
+                </div>
+
+                {/* Gaps matrix */}
+                <div style={{ marginBottom:32 }}>
+                  <p style={{ fontSize:12, fontWeight:700, textTransform:"uppercase", letterSpacing:1.5, color:"#999990", marginBottom:16 }}>Gaps matrix</p>
+                  <ImpactMatrix items={UX_IMPROVEMENTS} onSelect={(item) => {
+                    const parentFlow = FLOWS.find(f => f.phases.some(p => p.steps.some(s => s.id === item.stepId)));
+                    if (parentFlow) { setView(parentFlow.id); setTimeout(() => scrollToGap(item.stepId), 100); }
+                  }} />
+                </div>
+
+                {/* All improvements */}
+                <div style={{ marginBottom:32 }}>
+                  <p style={{ fontSize:12, fontWeight:700, textTransform:"uppercase", letterSpacing:1.5, color:"#999990", marginBottom:16 }}>All improvements</p>
+                  <IssueList items={UX_IMPROVEMENTS} onNavigate={(item) => {
+                    const parentFlow = FLOWS.find(f => f.phases.some(p => p.steps.some(s => s.id === item.stepId)));
+                    if (parentFlow) { setView(parentFlow.id); setTimeout(() => scrollToGap(item.stepId), 100); }
+                  }} />
                 </div>
 
                 {/* Explore full map */}
