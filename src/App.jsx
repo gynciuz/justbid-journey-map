@@ -282,7 +282,7 @@ function ImpactMatrix({ items, onSelect }) {
   };
   const W = 800, H = 400, PAD = 40;
   return (
-    <div style={{ background: "#1e1e1c", border: "1px solid #3e3e38", borderRadius: 16, padding: "24px 20px 16px", overflow: "hidden" }}>
+    <div style={{ padding: "24px 20px 16px", overflow: "hidden" }}>
       <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block" }}>
         <rect x={PAD} y={0} width={(W-PAD)/2} height={H/2} fill="#64c8a0" opacity="0.04" />
         <rect x={PAD+(W-PAD)/2} y={0} width={(W-PAD)/2} height={H/2} fill="#BA7517" opacity="0.04" />
@@ -342,25 +342,24 @@ function IssueList({ items, onNavigate }) {
         return (
           <div key={q} style={{ marginBottom: 24 }}>
             <p style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.2, color: qc.color, marginBottom: 10 }}>{qc.label}</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div className="improvements-grid">
               {group.map(item => (
                 <div key={item.id} onClick={() => onNavigate(item)}
-                  style={{ padding: "14px 18px", background: "#1e1e1c", border: `1px solid ${qc.color}18`, borderRadius: 12, cursor: "pointer", transition: "background .2s" }}
-                  onMouseEnter={e => e.currentTarget.style.background = "#262624"}
-                  onMouseLeave={e => e.currentTarget.style.background = "#1e1e1c"}
+                  style={{ padding: "14px 16px", border: `1px solid ${qc.color}18`, borderRadius: 12, cursor: "pointer", transition: "background .2s", display: "flex", flexDirection: "column" }}
+                  onMouseEnter={e => e.currentTarget.style.background = "#1e1e1c"}
+                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                    <span style={{ fontSize: 13, fontWeight: 800, color: qc.color, minWidth: 20 }}>#{item.id}</span>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: "#F7FAFC" }}>{item.title}</span>
-                    {item.gapId && <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, background: "#ff635d18", color: "#ff635d", fontWeight: 600 }}>Gap #{item.gapId}</span>}
-                    <div style={{ flex: 1 }} />
-                    <div style={{ display: "flex", gap: 4 }}>
-                      {item.source.map(s => (
-                        <span key={s} style={{ fontSize: 9, padding: "1px 5px", borderRadius: 3, background: `${SRC_COLORS[s] || "#888"}18`, color: SRC_COLORS[s] || "#888", fontWeight: 600, textTransform: "uppercase" }}>{s}</span>
-                      ))}
-                    </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: qc.color }}>#{item.id}</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: "#F7FAFC" }}>{item.title}</span>
+                    {item.gapId && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 4, background: "#ff635d18", color: "#ff635d", fontWeight: 600 }}>Gap #{item.gapId}</span>}
                   </div>
-                  <p style={{ fontSize: 13, color: "#A0AEC0", margin: 0, lineHeight: 1.5 }}>{item.desc}</p>
+                  <p style={{ fontSize: 12, color: "#A0AEC0", margin: "0 0 8px", lineHeight: 1.5, flex: 1 }}>{item.desc}</p>
+                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                    {item.source.map(s => (
+                      <span key={s} style={{ fontSize: 9, padding: "1px 5px", borderRadius: 3, background: `${SRC_COLORS[s] || "#888"}18`, color: SRC_COLORS[s] || "#888", fontWeight: 600, textTransform: "uppercase" }}>{s}</span>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
@@ -498,9 +497,17 @@ export default function App() {
         *, *::before, *::after { box-sizing: border-box; }
         body { margin:0; }
         .journey-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-        .home-container { max-width:860px; margin:0 auto; padding:56px 48px 120px; }
+        .improvements-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+        .home-container { max-width:1280px; margin:0 auto; padding:56px 48px 120px; }
+        @media (max-width:1200px) {
+          .improvements-grid { grid-template-columns:repeat(3,1fr) !important; }
+        }
+        @media (max-width:900px) {
+          .improvements-grid { grid-template-columns:repeat(2,1fr) !important; }
+        }
         @media (max-width:768px) {
           .journey-grid { grid-template-columns:1fr !important; }
+          .improvements-grid { grid-template-columns:1fr !important; }
           .home-container { padding:32px 16px 80px !important; }
         }
       `}</style>
@@ -538,7 +545,7 @@ export default function App() {
                 </div>
 
                 {/* Hero curve */}
-                <div style={{ background:"#1e1e1c", border:"1px solid #3e3e38", borderRadius:20, padding:"28px 20px 16px", marginBottom:32 }}>
+                <div style={{ padding:"28px 20px 16px", marginBottom:32 }}>
                   <BigCurve steps={hSteps} colors={hColors} activeId={null} onSelect={(id)=>{setView(hf.id);setActiveStep(id);}} />
                   <div style={{ display:"flex", justifyContent:"center", gap:16, marginTop:12 }}>
                     {hPhases.map(ph=>(
@@ -560,9 +567,9 @@ export default function App() {
                       const sevColor = SC[gap.severity];
                       return (
                         <div key={gap.rank} onClick={()=>{if(parentFlow){setView(parentFlow.id);setTimeout(()=>scrollToGap(gap.stepId),100);}}}
-                          style={{ padding:"20px 24px", background:"#1e1e1c", border:`1px solid ${sevColor}20`, borderRadius:14, cursor:"pointer", transition:"background .2s" }}
-                          onMouseEnter={e=>e.currentTarget.style.background="#262624"}
-                          onMouseLeave={e=>e.currentTarget.style.background="#1e1e1c"}
+                          style={{ padding:"20px 24px", border:`1px solid ${sevColor}20`, borderRadius:14, cursor:"pointer", transition:"background .2s" }}
+                          onMouseEnter={e=>e.currentTarget.style.background="#1e1e1c"}
+                          onMouseLeave={e=>e.currentTarget.style.background="transparent"}
                         >
                           <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
                             <span style={{ fontSize:24, fontWeight:800, color:sevColor }}>{gap.rank}</span>
@@ -651,7 +658,7 @@ export default function App() {
           </div>
 
           {/* ══════ BLUEPRINT ══════ */}
-          <div ref={blueprintRef} style={{ overflowX:"auto", padding:"0 0 200px" }}>
+          <div ref={blueprintRef} style={{ overflowX:"auto", paddingBottom:200 }}>
             <div style={{ display:"grid", gridTemplateColumns:gridCols, minWidth:"fit-content" }}>
 
               {/* Phases */}
@@ -805,10 +812,12 @@ export default function App() {
             <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} style={{
               position:"fixed", bottom:0, left:0, right:0, zIndex:90,
               background:"#262624", borderTop:"1px solid #3e3e38",
-              padding:"12px 24px 16px",
+              padding:"8px 24px 8px",
               boxShadow:"0 -8px 40px rgba(0,0,0,0.4)",
             }}>
-              <BigCurve steps={allSteps} colors={stepColors} activeId={effectiveActive} onSelect={scrollToStep} />
+              <div style={{ maxWidth:1280, margin:"0 auto" }}>
+                <BigCurve steps={allSteps} colors={stepColors} activeId={effectiveActive} onSelect={scrollToStep} />
+              </div>
             </div>
           </div>
         </div>
