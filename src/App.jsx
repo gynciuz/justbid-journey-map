@@ -294,7 +294,7 @@ function BigCurve({ steps, colors, activeId, onSelect }) {
         return (
           <g key={p.id} onClick={() => onSelect(p.id)} style={{ cursor:"pointer" }}>
             {gap && <circle cx={p.x} cy={p.y} r="16" fill={`${SC[gap.severity]}12`} stroke={SC[gap.severity]} strokeWidth="1" strokeDasharray="3 2" />}
-            {gap && <text x={p.x} y={p.y + 26} textAnchor="middle" fill={SC[gap.severity]} fontSize="11" fontWeight="800" fontFamily="inherit">#{gap.rank}</text>}
+            {gap && <text x={p.x} y={p.y + 26} textAnchor="middle" fill={SC[gap.severity]} fontSize="11" fontWeight="800" fontFamily="inherit">G{gap.rank}</text>}
             <circle cx={p.x} cy={p.y} r={isActive ? 7 : 5} fill={isActive ? c : "#262624"} stroke={c} strokeWidth={isActive ? 3 : 2}
               style={{ transition:"all .2s" }} />
             <text x={p.x} y={p.y - 14} textAnchor="middle" fill={isActive ? "#F7FAFC" : "#999990"} fontSize="10" fontWeight={isActive ? 700 : 500} fontFamily="inherit"
@@ -395,7 +395,7 @@ function IssueList({ items, onNavigate }) {
                     {item.source.map(s => (
                       <span key={s} style={{ fontSize: 9, padding: "1px 5px", borderRadius: 3, background: `${SRC_COLORS[s] || "#888"}18`, color: SRC_COLORS[s] || "#888", fontWeight: 600, textTransform: "uppercase" }}>{s}</span>
                     ))}
-                    {item.gapId && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 3, background: "#ff635d18", color: "#ff635d", fontWeight: 600, textTransform: "uppercase" }}>Gap #{item.gapId}</span>}
+                    {item.gapId && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 3, background: "#ff635d18", color: "#ff635d", fontWeight: 600, textTransform: "uppercase" }}>G{item.gapId}</span>}
                   </div>
                 </div>
               ))}
@@ -535,6 +535,7 @@ export default function App() {
         .journey-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
         .improvements-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
         .home-container { max-width:1280px; margin:0 auto; padding:56px 48px 120px; }
+        .home-container div::-webkit-scrollbar { display:none; }
         @media (max-width:1200px) {
           .improvements-grid { grid-template-columns:repeat(3,1fr) !important; }
         }
@@ -591,51 +592,43 @@ export default function App() {
             );
           })}
 
-          {/* Key issues */}
-          <div style={{ marginBottom:32 }}>
-            <p style={{ fontSize:12, fontWeight:700, textTransform:"uppercase", letterSpacing:1.5, color:"#ff635d", marginBottom:16 }}>Key issues</p>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12 }}>
-              {UX_GAPS.filter(g => g.severity === "Critical").map(gap => {
-                const parentFlow = FLOWS.find(f => f.phases.some(p => p.steps.some(s => s.id === gap.stepId)));
-                const step = FLOWS.flatMap(f=>f.phases).flatMap(p=>p.steps).find(s=>s.id===gap.stepId);
-                const sevColor = SC[gap.severity];
-                return (
-                  <div key={gap.rank} onClick={()=>{if(parentFlow){setView(parentFlow.id);setTimeout(()=>scrollToGap(gap.stepId),100);}}}
-                    style={{ padding:"20px 24px", border:`1px solid ${sevColor}20`, borderRadius:14, cursor:"pointer", transition:"background .2s" }}
-                    onMouseEnter={e=>e.currentTarget.style.background="#1e1e1c"}
-                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}
-                  >
-                    <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
-                      <span style={{ fontSize:24, fontWeight:800, color:sevColor }}>{gap.rank}</span>
-                      <span style={{ fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:.8, padding:"2px 6px",borderRadius:4,background:`${sevColor}18`,color:sevColor }}>{gap.severity}</span>
-                      <div style={{flex:1}}/>
-                      <ArrowRight size={16} color="#999990" />
-                    </div>
-                    <p style={{ fontSize:18, fontWeight:700, color:"#F7FAFC", margin:"0 0 8px", lineHeight:1.4 }}>{gap.title}</p>
-                    <p style={{ fontSize:14, color:"#A0AEC0", margin:"0 0 12px", lineHeight:1.6 }}>{gap.evidence}</p>
-                    {step && step.ux && (
-                      <div style={{ padding:"8px 10px",background:"#85aecf08",borderRadius:8,marginBottom:8 }}>
-                        <p style={{ fontSize:12,fontWeight:600,color:"#85aecf",margin:"0 0 2px" }}>UX: {step.ux.text}</p>
-                        {step.ux.desc && <p style={{ fontSize:11,color:"#A0AEC0",margin:0,lineHeight:1.45 }}>{step.ux.desc}</p>}
-                      </div>
-                    )}
-                    {step && step.biz && (
-                      <div style={{ padding:"8px 10px",background:"#64c8a008",borderRadius:8,marginBottom:8 }}>
-                        <p style={{ fontSize:12,fontWeight:600,color:"#64c8a0",margin:"0 0 2px" }}>BIZ: {step.biz.text}</p>
-                        {step.biz.desc && <p style={{ fontSize:11,color:"#A0AEC0",margin:0,lineHeight:1.45 }}>{step.biz.desc}</p>}
-                      </div>
-                    )}
-                    {step && step.competitor && (
-                      <div style={{ padding:"8px 10px",background:"#FF8C6908",borderRadius:8 }}>
-                        <span style={{ fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,color:"#FF8C69" }}>Competitors</span>
-                        <p style={{ fontSize:12,color:"#A0AEC0",margin:"4px 0 0",lineHeight:1.45 }}>{step.competitor}</p>
-                      </div>
-                    )}
+          {/* Key issues carousel */}
+          {(() => {
+            const scrollRef = React.createRef();
+            const scroll = (dir) => { if (scrollRef.current) scrollRef.current.scrollBy({ left: dir * 320, behavior: "smooth" }); };
+            return (
+              <div style={{ marginBottom:32 }}>
+                <div style={{ display:"flex", alignItems:"center", marginBottom:16 }}>
+                  <p style={{ fontSize:12, fontWeight:700, textTransform:"uppercase", letterSpacing:1.5, color:"#ff635d", margin:0 }}>Key issues</p>
+                  <div style={{ marginLeft:"auto", display:"flex", gap:8 }}>
+                    <button onClick={()=>scroll(-1)} style={{ width:32, height:32, borderRadius:16, border:"1px solid #3e3e38", background:"#262624", color:"#999990", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, fontFamily:"inherit" }}>&lsaquo;</button>
+                    <button onClick={()=>scroll(1)} style={{ width:32, height:32, borderRadius:16, border:"1px solid #3e3e38", background:"#262624", color:"#999990", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, fontFamily:"inherit" }}>&rsaquo;</button>
                   </div>
-                );
-              })}
-            </div>
-          </div>
+                </div>
+                <div ref={scrollRef} style={{ display:"flex", gap:14, overflowX:"auto", scrollSnapType:"x mandatory", paddingBottom:8, scrollbarWidth:"none", msOverflowStyle:"none" }}>
+                  {UX_GAPS.map(gap => {
+                    const parentFlow = FLOWS.find(f => f.phases.some(p => p.steps.some(s => s.id === gap.stepId)));
+                    const sevColor = SC[gap.severity];
+                    return (
+                      <div key={gap.rank} onClick={()=>{if(parentFlow){setView(parentFlow.id);setTimeout(()=>scrollToGap(gap.stepId),100);}}}
+                        style={{ flex:"0 0 300px", scrollSnapAlign:"start", padding:"24px", background:"transparent", border:"1px solid #3e3e38", borderRadius:16, cursor:"pointer", transition:"all .2s", display:"flex", flexDirection:"column" }}
+                        onMouseEnter={e=>{e.currentTarget.style.background="#1e1e1c";e.currentTarget.style.border="1px solid transparent";}}
+                        onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.border="1px solid #3e3e38";}}
+                      >
+                        <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+                          <span style={{ fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:.8, color:sevColor }}>{gap.severity}</span>
+                          <span style={{ fontSize:10, color:"#787870" }}>{gap.phase}</span>
+                        </div>
+                        <p style={{ fontSize:20, fontWeight:800, color:"#F7FAFC", margin:"0 0 4px", lineHeight:1.3 }}>G{gap.rank}</p>
+                        <p style={{ fontSize:16, fontWeight:600, color:"#E2E8F0", margin:"0 0 10px", lineHeight:1.4 }}>{gap.title}</p>
+                        <p style={{ fontSize:13, color:"#A0AEC0", margin:0, lineHeight:1.55, flex:1 }}>{gap.evidence}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Improvements matrix */}
           <div style={{ marginBottom:32 }}>
@@ -698,7 +691,7 @@ export default function App() {
                     style={{ ...cellStyle(st.id), display:"flex",flexDirection:"column",gap:4 }}>
                     <div>
                       <span style={{ fontSize:18,fontWeight:600,color:isActive(st.id)?"#F7FAFC":"#E2E8F0" }}>{st.title}</span>
-                      {gap && <div style={{ fontSize:11,fontWeight:700,marginTop:3,padding:"1px 6px",borderRadius:4, display:"inline-flex",background:`${SC[gap.severity]}18`,color:SC[gap.severity],alignItems:"center",gap:3 }}><AlertTriangle size={8} />Gap #{gap.rank}</div>}
+                      {gap && <div style={{ fontSize:11,fontWeight:700,marginTop:3,padding:"1px 6px",borderRadius:4, display:"inline-flex",background:`${SC[gap.severity]}18`,color:SC[gap.severity],alignItems:"center",gap:3 }}><AlertTriangle size={8} />G{gap.rank}</div>}
                     </div>
                     {st.desc && <p style={{ fontSize:14,color:isActive(st.id)?"#B2BEC3":"#999990",margin:0,lineHeight:1.45 }}>{st.desc}</p>}
                   </div>
@@ -758,7 +751,7 @@ export default function App() {
                       <div>
                         <div style={{ height:2,background:SC[gap.severity],marginBottom:10,borderRadius:1 }} />
                         <div style={{ display:"flex",alignItems:"baseline",gap:8 }}>
-                          <span style={{ fontSize:24,fontWeight:800,color:SC[gap.severity],lineHeight:1 }}>#{gap.rank}</span>
+                          <span style={{ fontSize:24,fontWeight:800,color:SC[gap.severity],lineHeight:1 }}>G{gap.rank}</span>
                           <p style={{ fontSize:14,fontWeight:600,color:"#F7FAFC",margin:0,lineHeight:1.4 }}>{gap.title}</p>
                         </div>
                       </div>
@@ -819,7 +812,7 @@ export default function App() {
                   {phases.map(ph=>ph.steps.map(st=>(
                     <div key={`${row.key}-${st.id}`} onClick={()=>scrollToStep(st.id)} onMouseEnter={()=>setHovered(st.id)} onMouseLeave={()=>setHovered(null)}
                       style={{ ...cellStyle(st.id) }}>
-                      <p style={{ fontSize:14,color:isActive(st.id)?"#E2E8F0":"#9a9a92",margin:0,lineHeight:1.65 }}>{row.get(st)}</p>
+                      <p style={{ fontSize:14,color:isActive(st.id)?"#E2E8F0":"#9a9a92",margin:0,lineHeight:1.6 }}>{row.get(st)}</p>
                       <SourceTags stepId={st.id} rowKey={row.key} />
                     </div>
                   )))}
@@ -833,7 +826,7 @@ export default function App() {
                   {phases.map(ph=>ph.steps.map(st=>(
                     <div key={`${row.key}-${st.id}`} onClick={()=>scrollToStep(st.id)} onMouseEnter={()=>setHovered(st.id)} onMouseLeave={()=>setHovered(null)}
                       style={{ ...cellStyle(st.id) }}>
-                      <p style={{ fontSize:14,color:isActive(st.id)?"#E2E8F0":"#B2BEC3",margin:0,lineHeight:1.65 }}>{row.get(st)}</p>
+                      <p style={{ fontSize:14,color:isActive(st.id)?"#E2E8F0":"#B2BEC3",margin:0,lineHeight:1.6 }}>{row.get(st)}</p>
                       <SourceTags stepId={st.id} rowKey={row.key} />
                     </div>
                   )))}
