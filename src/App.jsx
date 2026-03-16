@@ -794,6 +794,7 @@ export default function App() {
                               <span style={{ fontSize:13,fontWeight:600,color:isActive(st.id)?"#E2E8F0":"#B2BEC3" }}>{imp.title}</span>
                             </div>
                             <p style={{ fontSize:12,color:"#A0AEC0",margin:0,lineHeight:1.45 }}>{imp.desc}</p>
+                            {imp.source&&imp.source.includes("backlog")&&<span style={{ fontSize:9,padding:"1px 5px",borderRadius:3,background:"#c9a0dc18",color:"#c9a0dc",fontWeight:600,textTransform:"uppercase",marginTop:4,display:"inline-block" }}>backlog</span>}
                           </div>
                         );
                       })}
