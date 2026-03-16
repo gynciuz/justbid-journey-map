@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JustBid Pickup Flow — Prototype</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { overflow: hidden; }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+/* ICONS */
+const I = ({ d, size = 24, color = "currentColor", sw = 1.5 }) => (
+  <svg width={size} height={size} viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d={d} stroke={color} strokeWidth={sw * (256/24)} strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+const Icon = {
+  Battery: ({ size, color }) => <I size={size} color={color} d="M32 96h168a8 8 0 018 8v48a8 8 0 01-8 8H32a8 8 0 01-8-8v-48a8 8 0 018-8zm208 16v32" />,
+  House: ({ size, color }) => <I size={size} color={color} d="M128 24L28 108h24v100h64v-64h24v64h64V108h24L128 24z" />,
+  Tag: ({ size, color }) => <I size={size} color={color} d="M40 128V48a8 8 0 018-8h80l88 88-80 80-88-88zm40-48a12 12 0 1024 0 12 12 0 00-24 0z" />,
+  Trophy: ({ size, color }) => <I size={size} color={color} d="M80 40h96v88a48 48 0 01-96 0V40zm-32 0h32m96 0h32M176 40c0 24 24 48 24 48H56s24-24 24-48m48 128v32m-32 0h64" />,
+  Heart: ({ size, color }) => <I size={size} color={color} d="M128 224S24 168 24 100a52 52 0 01104-8 52 52 0 01104 8c0 68-104 124-104 124z" />,
+  User: ({ size, color }) => <I size={size} color={color} d="M128 128a48 48 0 100-96 48 48 0 000 96zm80 96a80 80 0 00-160 0" />,
+  MapPin: ({ size, color }) => <I size={size} color={color} d="M128 24a80 80 0 00-80 80c0 72 80 128 80 128s80-56 80-128a80 80 0 00-80-80zm0 112a32 32 0 110-64 32 32 0 010 64z" />,
+  Clock: ({ size, color }) => <I size={size} color={color} d="M128 228a100 100 0 100-200 100 100 0 000 200zm0-148v48l40 24" />,
+  PersonWalk: ({ size, color }) => <I size={size} color={color} d="M152 48a24 24 0 11-48 0 24 24 0 0148 0zM96 240l16-80m48 80l-16-80m-40-40l-40 40h48l48-40m-32-16v56" />,
+  Package: ({ size, color }) => <I size={size} color={color} d="M32 80l96-48 96 48v96l-96 48-96-48V80zm0 0l96 48m0 0v96m0-96l96-48" />,
+  IdCard: ({ size, color }) => <I size={size} color={color} d="M32 64h192a8 8 0 018 8v112a8 8 0 01-8 8H32a8 8 0 01-8-8V72a8 8 0 018-8zm64 104a32 32 0 10-32-32 32 32 0 0032 32zm80-56h40m-40 32h40" />,
+  CalendarPlus: ({ size, color }) => <I size={size} color={color} d="M40 48h176a8 8 0 018 8v152a8 8 0 01-8 8H40a8 8 0 01-8-8V56a8 8 0 018-8zM176 24v48M80 24v48m-48 32h192m-96 24v48m-24-24h48" />,
+  UsersThree: ({ size, color }) => <I size={size} color={color} d="M128 144a40 40 0 100-80 40 40 0 000 80zm80 72a80 80 0 00-160 0m192-52a48 48 0 00-32-64m-144 0a48 48 0 00-32 64" />,
+  Receipt: ({ size, color }) => <I size={size} color={color} d="M40 48h176v176l-24-16-24 16-24-16-24 16-24-16-24 16-24-16-24 16V48zm48 48h80m-80 32h80m-80 32h48" />,
+};
+
+const ItemThumb = ({ size = 24 }) => (
+  <div style={{
+    width: size, height: size,
+    borderRadius: size > 30 ? 10 : 6,
+    background: "#EDEDEB",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    flexShrink: 0,
+  }}>
+    <svg width={size * 0.45} height={size * 0.45} viewBox="0 0 24 24" fill="none" stroke="#B5B5AD" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="2" width="20" height="20" rx="3"/>
+      <circle cx="8.5" cy="8.5" r="2"/>
+      <path d="M22 15l-5-5L2 22"/>
+    </svg>
+  </div>
+);
+/* DATA */
+const ORDERS = [
+  {
+    id: "a1",
+    auction: "03/11/26",
+    items: [{ name: "Sterling Silver Ring Set", img: "ring", color: "#B0A090", initials: "SR", qty: 1 }],
+    total: "$10.96",
+    status: "paid",
+    location: "Kansas City: Enterprise Dr",
+    address: "3601 Enterprise Dr, Kansas City, MO 64129",
+    deadline: "Sat, Mar 14 · 2:00 PM",
+    daysLeft: 2,
+    pickupDays: [
+      { date: "Thu, Mar 12", hours: "10:00 AM – 6:00 PM", type: "live", label: "Walk-in" },
+      { date: "Fri, Mar 13", hours: "10:00 AM – 6:00 PM", type: "appt", label: "Appointment only" },
+      { date: "Sat, Mar 14", hours: "9:00 AM – 2:00 PM", type: "live", label: "Walk-in" },
+    ],
+  },
+  {
+    id: "b1",
+    auction: "03/11/26",
+    items: [
+      { name: "Cuisinart Food Processor", img: "processor", color: "#7A8B6F", initials: "FP", qty: 1 },
+      { name: "Glass Storage Set (12pc)", img: "glass", color: "#8DAAB7", initials: "GS", qty: 1 },
+    ],
+    total: "$6.87",
+    status: "failed",
+    failReason: "Credit card number is invalid",
+    card: "*6461",
+    location: "Brookline: Sawyer Rd",
+    address: "3000 East Sawyer Road, Brookline, MO 65619",
+    deadline: "Sat, Mar 14 · 2:00 PM",
+    daysLeft: 2,
+  },
+];
+
+const SLOTS_THU = [
+  { time: "10:00 AM", status: "available" },
+  { time: "10:15 AM", status: "available" },
+  { time: "10:30 AM", status: "available" },
+  { time: "10:45 AM", status: "available" },
+  { time: "11:00 AM", status: "full", reason: "Full" },
+  { time: "11:15 AM", status: "full", reason: "Full" },
+  { time: "11:30 AM", status: "available" },
+  { time: "11:45 AM", status: "available" },
+  { time: "12:00 PM", status: "available" },
+  { time: "12:15 PM", status: "available" },
+  { time: "12:30 PM", status: "available" },
+];
+
+const SLOTS_FRI = [
+  { time: "10:00 AM", status: "cutoff", reason: "Within 1hr cutoff" },
+  { time: "10:15 AM", status: "cutoff", reason: "Within 1hr cutoff" },
+  { time: "10:30 AM", status: "available" },
+  { time: "10:45 AM", status: "available" },
+  { time: "11:00 AM", status: "available" },
+  { time: "11:15 AM", status: "available" },
+  { time: "11:30 AM", status: "full", reason: "Full" },
+  { time: "11:45 AM", status: "available" },
+  { time: "12:00 PM", status: "available" },
+];
+
+const SLOTS_SAT = [];
+
+const CAL_DAYS = [
+  { key: "thu", label: "Thu", date: "12", fullDate: "Thu, Mar 12", type: "live", slots: SLOTS_THU, tag: "Walk-in" },
+  { key: "fri", label: "Fri", date: "13", fullDate: "Fri, Mar 13", type: "appt", slots: SLOTS_FRI, tag: "Appointment" },
+  { key: "sat", label: "Sat", date: "14", fullDate: "Sat, Mar 14", type: "live", slots: SLOTS_SAT, tag: "Walk-in · Last day" },
+];
+/* TOKENS */
+const C = {
+  bg: "#FAFAF8",
+  surface: "#FFFFFF",
+  surfaceAlt: "#F5F4F0",
+  text: "#1A1A1A",
+  textSec: "#8A8A82",
+  textTer: "#B5B5AD",
+  accent: "#1A6CFF",
+  accentSoft: "#EBF2FF",
+  success: "#22A06B",
+  successSoft: "#E3FCEF",
+  danger: "#E34935",
+  dangerSoft: "#FFF0EE",
+  warn: "#E8A817",
+  warnSoft: "#FFF8E1",
+  border: "#EDEDEB",
+  borderFocus: "#1A6CFF",
+  appt: "#7B5FE0",
+  apptSoft: "#F0ECFF",
+  live: "#0D8A6A",
+  liveSoft: "#E6F7F1",
+};
+
+const font = `'Outfit', -apple-system, sans-serif`;
+/* COMPONENTS */
+function Phone({ children }) {
+  return (
+    <div style={{
+      width: 393, maxHeight: 852, height: "100vh",
+      background: C.bg, borderRadius: 44, overflow: "hidden",
+      boxShadow: "0 0 0 8px #1A1A1A, 0 40px 100px rgba(0,0,0,0.25)",
+      position: "relative", display: "flex", flexDirection: "column",
+      fontFamily: font,
+    }}>
+      {/* Status bar */}
+      <div style={{
+        padding: "14px 28px 8px", display: "flex", justifyContent: "space-between",
+        alignItems: "center", fontSize: 14, fontWeight: 600, color: C.text,
+        flexShrink: 0,
+      }}>
+        <span>11:21</span>
+        <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+          <span style={{ fontSize: 12 }}>●●●○</span>
+          <span style={{ fontSize: 12 }}>WiFi</span>
+          <Icon.Battery size={13} color={C.text} />
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function TopBar({ title, onBack, right }) {
+  return (
+    <div style={{
+      padding: "4px 20px 12px", display: "flex", alignItems: "center",
+      gap: 12, flexShrink: 0,
+    }}>
+      {onBack && (
+        <button onClick={onBack} style={{
+          width: 36, height: 36, borderRadius: 12, background: C.surfaceAlt,
+          border: "none", cursor: "pointer", fontSize: 18, display: "flex",
+          alignItems: "center", justifyContent: "center", color: C.text,
+          flexShrink: 0,
+        }}>
+          ←
+        </button>
+      )}
+      <h2 style={{
+        fontSize: 20, fontWeight: 700, margin: 0, color: C.text,
+        letterSpacing: -0.4, flex: 1,
+      }}>
+        {title}
+      </h2>
+      {right}
+    </div>
+  );
+}
+
+function BigButton({ children, onClick, variant = "primary", disabled, style: sx }) {
+  const bg = variant === "primary" ? C.accent : variant === "danger" ? C.danger : C.surface;
+  const fg = variant === "outline" ? C.text : "#FFFFFF";
+  const border = variant === "outline" ? `1.5px solid ${C.border}` : "none";
+  return (
+    <button onClick={onClick} disabled={disabled} style={{
+      width: "100%", padding: "16px 24px", borderRadius: 16,
+      background: disabled ? C.textTer : bg, color: disabled ? "#fff" : fg,
+      border, fontSize: 16, fontWeight: 600, cursor: disabled ? "default" : "pointer",
+      fontFamily: font, transition: "all .15s", opacity: disabled ? 0.6 : 1,
+      ...sx,
+    }}>
+      {children}
+    </button>
+  );
+}
+
+function Badge({ children, color, bg }) {
+  return (
+    <span style={{
+      fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 8,
+      background: bg, color: color, letterSpacing: 0.3, textTransform: "uppercase",
+      whiteSpace: "nowrap",
+    }}>
+      {children}
+    </span>
+  );
+}
+
+function DeadlinePill({ daysLeft }) {
+  const color = daysLeft <= 1 ? C.danger : daysLeft <= 2 ? C.warn : C.success;
+  const bg = daysLeft <= 1 ? C.dangerSoft : daysLeft <= 2 ? C.warnSoft : C.successSoft;
+  const label = daysLeft <= 1 ? "Expires tomorrow" : `${daysLeft} days left`;
+  return <Badge color={color} bg={bg}>{label}</Badge>;
+}
+/* TRIAGE */
+
+function TriageScreen({ onSelectOrder }) {
+  const paid = ORDERS.filter(o => o.status === "paid");
+  const failed = ORDERS.filter(o => o.status === "failed");
+
+  return (
+    <>
+      <TopBar title="Pickups" />
+      <div style={{ flex: 1, overflow: "auto", padding: "0 20px 100px" }}>
+        {/* Summary */}
+        <div style={{
+          padding: "28px 24px", background: C.surface, borderRadius: 20,
+          marginBottom: 24, border: `1px solid ${C.border}`,
+        }}>
+          <div style={{ fontSize: 32, fontWeight: 800, color: C.text, letterSpacing: -1, lineHeight: 1.1 }}>
+            {ORDERS.length} things
+          </div>
+          <div style={{ fontSize: 15, color: C.textSec, marginTop: 6, lineHeight: 1.5 }}>
+            need your attention
+          </div>
+        </div>
+
+        {/* Payment issues first — blocking */}
+        {failed.length > 0 && (
+          <div style={{ marginBottom: 28 }}>
+            <div style={{
+              fontSize: 12, fontWeight: 700, color: C.danger, textTransform: "uppercase",
+              letterSpacing: 1, padding: "0 4px", marginBottom: 12,
+              display: "flex", alignItems: "center", gap: 8,
+            }}>
+              <span style={{
+                width: 8, height: 8, borderRadius: "50%", background: C.danger,
+                display: "inline-block",
+              }} />
+              Needs payment
+            </div>
+            {failed.map(o => (
+              <button key={o.id} onClick={() => onSelectOrder(o)} style={{
+                width: "100%", padding: "20px", background: C.surface,
+                borderRadius: 20, border: `1.5px solid ${C.dangerSoft}`,
+                cursor: "pointer", textAlign: "left", fontFamily: font,
+                marginBottom: 10, transition: "all .12s",
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {o.items.map((it, i) => <span key={i}><ItemThumb size={28} /></span>)}
+                  </div>
+                  <Badge color={C.danger} bg={C.dangerSoft}>Payment failed</Badge>
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 4 }}>
+                  {o.items.length} item{o.items.length > 1 ? "s" : ""} · {o.total}
+                </div>
+                <div style={{ fontSize: 13, color: C.textSec, marginBottom: 8 }}>
+                  {o.location}
+                </div>
+                <div style={{ fontSize: 13, color: C.danger, fontWeight: 500 }}>
+                  {o.failReason} · Card {o.card}
+                </div>
+                <div style={{
+                  marginTop: 14, padding: "12px 0 0",
+                  borderTop: `1px solid ${C.border}`,
+                  fontSize: 14, fontWeight: 600, color: C.danger,
+                  display: "flex", alignItems: "center", gap: 6,
+                }}>
+                  Fix payment →
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Ready to schedule */}
+        {paid.length > 0 && (
+          <div>
+            <div style={{
+              fontSize: 12, fontWeight: 700, color: C.success, textTransform: "uppercase",
+              letterSpacing: 1, padding: "0 4px", marginBottom: 12,
+              display: "flex", alignItems: "center", gap: 8,
+            }}>
+              <span style={{
+                width: 8, height: 8, borderRadius: "50%", background: C.success,
+                display: "inline-block",
+              }} />
+              Ready to schedule
+            </div>
+            {paid.map(o => (
+              <button key={o.id} onClick={() => onSelectOrder(o)} style={{
+                width: "100%", padding: "20px", background: C.surface,
+                borderRadius: 20, border: `1px solid ${C.border}`,
+                cursor: "pointer", textAlign: "left", fontFamily: font,
+                marginBottom: 10, transition: "all .12s",
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {o.items.map((it, i) => <span key={i}><ItemThumb size={28} /></span>)}
+                  </div>
+                  <DeadlinePill daysLeft={o.daysLeft} />
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 4 }}>
+                  {o.items.length} item{o.items.length > 1 ? "s" : ""} · {o.total}
+                </div>
+                <div style={{ fontSize: 13, color: C.textSec, marginBottom: 4 }}>
+                  {o.location}
+                </div>
+                <div style={{ fontSize: 13, color: C.textSec }}>
+                  Pick up by {o.deadline}
+                </div>
+                <div style={{
+                  marginTop: 14, padding: "12px 0 0",
+                  borderTop: `1px solid ${C.border}`,
+                  fontSize: 14, fontWeight: 600, color: C.accent,
+                  display: "flex", alignItems: "center", gap: 6,
+                }}>
+                  Schedule pickup →
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Tab bar */}
+      <TabBar active="wins" />
+    </>
+  );
+}
+
+function TabBar({ active }) {
+  const tabs = [
+    { id: "home", label: "Home", Ic: Icon.House },
+    { id: "bids", label: "Bids", Ic: Icon.Tag },
+    { id: "wins", label: "Wins", Ic: Icon.Trophy },
+    { id: "wish", label: "Wishlist", Ic: Icon.Heart },
+    { id: "profile", label: "Profile", Ic: Icon.User },
+  ];
+  return (
+    <div style={{
+      display: "flex", justifyContent: "space-around", padding: "10px 0 28px",
+      background: C.surface, borderTop: `1px solid ${C.border}`,
+      flexShrink: 0,
+    }}>
+      {tabs.map(t => (
+        <div key={t.id} style={{
+          display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+          fontSize: 10, fontWeight: 600,
+          color: active === t.id ? C.accent : C.textTer,
+        }}>
+          <span style={{ fontSize: 18 }}><t.Ic size={20} color={active === t.id ? C.accent : C.textTer} /></span>
+          {t.label}
+        </div>
+      ))}
+    </div>
+  );
+}
+/* PAYMENT */
+function PaymentFixScreen({ order, onBack }) {
+  const [fixing, setFixing] = useState(false);
+
+  return (
+    <>
+      <TopBar title="Fix payment" onBack={onBack} />
+      <div style={{ flex: 1, overflow: "auto", padding: "0 20px 40px" }}>
+        <div style={{
+          padding: "24px", background: C.dangerSoft, borderRadius: 20,
+          marginBottom: 24,
+        }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: C.danger, marginBottom: 4 }}>
+            {order.failReason}
+          </div>
+          <div style={{ fontSize: 13, color: C.textSec }}>
+            Card {order.card} was charged {order.total} but the payment didn't go through.
+          </div>
+        </div>
+
+        <div style={{ fontSize: 13, fontWeight: 700, color: C.textSec, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 12 }}>
+          Items at risk
+        </div>
+
+        {order.items.map((it, i) => (
+          <div key={i} style={{
+            display: "flex", gap: 14, padding: "16px 0",
+            borderBottom: i < order.items.length - 1 ? `1px solid ${C.border}` : "none",
+            alignItems: "center",
+          }}>
+            <ItemThumb size={36} />
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{it.name}</div>
+              <div style={{ fontSize: 13, color: C.textSec }}>{order.location}</div>
+            </div>
+          </div>
+        ))}
+
+        <div style={{
+          padding: "20px 24px", background: C.surfaceAlt, borderRadius: 16,
+          marginTop: 24, marginBottom: 24,
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+            <span style={{ fontSize: 14, color: C.textSec }}>Amount due</span>
+            <span style={{ fontSize: 16, fontWeight: 700, color: C.text }}>{order.total}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 14, color: C.textSec }}>Deadline</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: C.danger }}>{order.deadline}</span>
+          </div>
+        </div>
+
+        <BigButton variant="danger" onClick={() => setFixing(true)}>
+          Update card & retry · {order.total}
+        </BigButton>
+        <div style={{ height: 10 }} />
+        <BigButton variant="outline" onClick={onBack}>
+          I'll do this later
+        </BigButton>
+      </div>
+    </>
+  );
+}
+/* ORDER CONFIRM */
+function OrderConfirmScreen({ order, onBack, onNext }) {
+  return (
+    <>
+      <TopBar title="What you're picking up" onBack={onBack} />
+      <div style={{ flex: 1, overflow: "auto", padding: "0 20px 40px" }}>
+        {/* Step indicator */}
+        <StepIndicator current={0} />
+
+        <div style={{
+          padding: "24px", background: C.surface, borderRadius: 20,
+          border: `1px solid ${C.border}`, marginBottom: 20,
+        }}>
+          {order.items.map((it, i) => (
+            <div key={i} style={{
+              display: "flex", gap: 14, padding: "12px 0",
+              borderBottom: i < order.items.length - 1 ? `1px solid ${C.border}` : "none",
+              alignItems: "center",
+            }}>
+              <div style={{
+                width: 52, height: 52, borderRadius: 14, background: C.surfaceAlt,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                flexShrink: 0,
+              }}>
+                <ItemThumb size={40} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 15, fontWeight: 600, color: C.text, lineHeight: 1.3 }}>{it.name}</div>
+                <div style={{ fontSize: 13, color: C.textSec, marginTop: 2 }}>Qty: {it.qty}</div>
+              </div>
+              <div style={{
+                width: 24, height: 24, borderRadius: 7, background: C.accentSoft,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: C.accent, fontSize: 14, fontWeight: 700,
+              }}>
+                ✓
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Location + deadline */}
+        <div style={{
+          padding: "20px 24px", background: C.surfaceAlt, borderRadius: 16,
+          marginBottom: 20,
+        }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 14 }}>
+            <span style={{ marginTop: 1 }}><Icon.MapPin size={18} color={C.textSec} /></span>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{order.location}</div>
+              <div style={{ fontSize: 13, color: C.textSec, marginTop: 2 }}>{order.address}</div>
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span><Icon.Clock size={18} color={C.textSec} /></span>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 14, color: C.text }}>Pick up by {order.deadline}</span>
+              <DeadlinePill daysLeft={order.daysLeft} />
+            </div>
+          </div>
+        </div>
+
+        {/* Available days preview */}
+        <div style={{
+          fontSize: 12, fontWeight: 700, color: C.textSec, textTransform: "uppercase",
+          letterSpacing: 0.8, marginBottom: 10, padding: "0 4px",
+        }}>
+          Available pickup days
+        </div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 28 }}>
+          {order.pickupDays.map((d, i) => (
+            <div key={i} style={{
+              flex: 1, padding: "12px", background: C.surface, borderRadius: 14,
+              border: `1px solid ${C.border}`, textAlign: "center",
+            }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{d.date.split(",")[0]}</div>
+              <div style={{ fontSize: 11, color: C.textSec, marginTop: 2 }}>{d.date.split(", ")[1]}</div>
+              <div style={{ marginTop: 8 }}>
+                <Badge
+                  color={d.type === "appt" ? C.appt : C.live}
+                  bg={d.type === "appt" ? C.apptSoft : C.liveSoft}
+                >
+                  {d.label}
+                </Badge>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <BigButton onClick={onNext}>
+          Choose a day →
+        </BigButton>
+      </div>
+    </>
+  );
+}
+
+function StepIndicator({ current }) {
+  const steps = ["Items", "Day", "Time", "Done"];
+  return (
+    <div style={{
+      display: "flex", gap: 6, marginBottom: 24, alignItems: "center",
+      padding: "0 4px",
+    }}>
+      {steps.map((s, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{
+            width: i <= current ? "auto" : 8,
+            height: 8,
+            padding: i <= current ? "2px 10px" : 0,
+            borderRadius: 6,
+            background: i < current ? C.success : i === current ? C.accent : C.border,
+            fontSize: 10,
+            fontWeight: 700,
+            color: "#fff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            transition: "all .3s",
+          }}>
+            {i < current ? "✓" : i === current ? s : ""}
+          </div>
+          {i < steps.length - 1 && (
+            <div style={{
+              flex: 1, height: 2, minWidth: 16,
+              background: i < current ? C.success : C.border,
+              borderRadius: 1,
+            }} />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+/* DAY PICKER */
+function DayPickerScreen({ onBack, onSelectDay }) {
+  const [selected, setSelected] = useState(null);
+
+  return (
+    <>
+      <TopBar title="Pick a day" onBack={onBack} />
+      <div style={{ flex: 1, overflow: "auto", padding: "0 20px 40px" }}>
+        <StepIndicator current={1} />
+
+        <div style={{ fontSize: 15, color: C.textSec, marginBottom: 24, lineHeight: 1.6 }}>
+          Only days with available pickup for your items are shown.
+        </div>
+
+        {CAL_DAYS.map((d) => {
+          const isSel = selected === d.key;
+          const avail = d.slots.filter(s => s.status === "available").length;
+          const noSlots = d.type === "appt" && avail === 0 && d.slots.length > 0;
+          const isLiveOnly = d.type === "live" && d.slots.length === 0;
+
+          return (
+            <button key={d.key} onClick={() => setSelected(d.key)} style={{
+              width: "100%", padding: "20px 24px", background: isSel ? C.accentSoft : C.surface,
+              borderRadius: 20, border: `1.5px solid ${isSel ? C.accent : C.border}`,
+              cursor: "pointer", textAlign: "left", fontFamily: font,
+              marginBottom: 10, transition: "all .12s",
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 4 }}>
+                    {d.fullDate}
+                  </div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <Badge
+                      color={d.type === "appt" ? C.appt : C.live}
+                      bg={d.type === "appt" ? C.apptSoft : C.liveSoft}
+                    >
+                      {d.tag}
+                    </Badge>
+                    {d.type === "appt" && avail > 0 && (
+                      <span style={{ fontSize: 12, color: C.textSec }}>{avail} slots open</span>
+                    )}
+                    {isLiveOnly && (
+                      <span style={{ fontSize: 12, color: C.live, fontWeight: 500 }}>No appointment needed</span>
+                    )}
+                    {noSlots && (
+                      <span style={{ fontSize: 12, color: C.warn, fontWeight: 500 }}>All slots full</span>
+                    )}
+                  </div>
+                </div>
+                <div style={{
+                  width: 48, height: 48, borderRadius: 14,
+                  background: isSel ? C.accent : C.surfaceAlt,
+                  display: "flex", flexDirection: "column",
+                  alignItems: "center", justifyContent: "center",
+                  color: isSel ? "#fff" : C.text,
+                  transition: "all .15s",
+                }}>
+                  <span style={{ fontSize: 10, fontWeight: 600, lineHeight: 1, opacity: 0.6 }}>{d.label}</span>
+                  <span style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.1 }}>{d.date}</span>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+
+        <div style={{ marginTop: 20 }}>
+          <BigButton
+            onClick={() => onSelectDay(CAL_DAYS.find(d => d.key === selected))}
+            disabled={!selected}
+          >
+            {selected ? (
+              CAL_DAYS.find(d => d.key === selected)?.type === "live" && CAL_DAYS.find(d => d.key === selected)?.slots.length === 0
+                ? "Continue with walk-in →"
+                : "Choose a time →"
+            ) : "Select a day"}
+          </BigButton>
+        </div>
+      </div>
+    </>
+  );
+}
+/* TIME PICKER */
+function TimePickerScreen({ day, onBack, onSelectTime }) {
+  const [selected, setSelected] = useState(null);
+
+  if (day.type === "live" && day.slots.length === 0) {
+    return (
+      <>
+        <TopBar title="Walk-in details" onBack={onBack} />
+        <div style={{ flex: 1, overflow: "auto", padding: "0 20px 40px" }}>
+          <StepIndicator current={2} />
+          <div style={{
+            padding: "40px 24px", background: C.liveSoft, borderRadius: 24,
+            textAlign: "center", marginBottom: 24,
+          }}>
+            <div style={{ marginBottom: 16 }}><Icon.PersonWalk size={40} color={C.live} /></div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 8 }}>
+              Just show up
+            </div>
+            <div style={{ fontSize: 15, color: C.textSec, lineHeight: 1.6 }}>
+              {day.fullDate} is a walk-in day.<br />
+              Come anytime during operating hours,<br />
+              scan the QR at the entrance, and join the live queue.
+            </div>
+          </div>
+          <BigButton onClick={() => onSelectTime({ time: "Walk-in", type: "live" })}>
+            Confirm walk-in →
+          </BigButton>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <TopBar title={`${day.fullDate}`} onBack={onBack} />
+      <div style={{ flex: 1, overflow: "auto", padding: "0 20px 40px" }}>
+        <StepIndicator current={2} />
+
+        <div style={{ fontSize: 15, color: C.textSec, marginBottom: 20, lineHeight: 1.6 }}>
+          15-minute slots. Pick one that works for you.
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {day.slots.map((s, i) => {
+            const isAvail = s.status === "available";
+            const isSel = selected === i && isAvail;
+            return (
+              <button key={i} onClick={() => isAvail && setSelected(i)} style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "14px 18px", borderRadius: 14,
+                background: isSel ? C.accentSoft : isAvail ? C.surface : C.surfaceAlt,
+                border: `1.5px solid ${isSel ? C.accent : isAvail ? C.border : "transparent"}`,
+                cursor: isAvail ? "pointer" : "default",
+                fontFamily: font, transition: "all .1s",
+                opacity: isAvail ? 1 : 0.5,
+              }}>
+                <span style={{
+                  fontSize: 15, fontWeight: 600,
+                  color: isSel ? C.accent : isAvail ? C.text : C.textTer,
+                }}>
+                  {s.time}
+                </span>
+                {!isAvail && (
+                  <span style={{
+                    fontSize: 11, fontWeight: 600, color: C.textTer,
+                    background: C.border, padding: "2px 8px", borderRadius: 6,
+                  }}>
+                    {s.reason}
+                  </span>
+                )}
+                {isSel && (
+                  <div style={{
+                    width: 22, height: 22, borderRadius: 7, background: C.accent,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "#fff", fontSize: 12, fontWeight: 700,
+                  }}>✓</div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={{ marginTop: 24 }}>
+          <BigButton
+            onClick={() => onSelectTime({ time: day.slots[selected]?.time, type: "appt" })}
+            disabled={selected === null}
+          >
+            {selected !== null ? `Book ${day.slots[selected]?.time} →` : "Select a time"}
+          </BigButton>
+        </div>
+      </div>
+    </>
+  );
+}
+/* CONFIRMATION */
+function ConfirmScreen({ order, day, slot, onDone }) {
+  const [addedToCal, setAddedToCal] = useState(false);
+
+  return (
+    <>
+      <div style={{ flex: 1, overflow: "auto", padding: "0 20px 40px" }}>
+        {/* Big confirmation hero */}
+        <div style={{
+          padding: "48px 24px 36px", textAlign: "center",
+          marginBottom: 24,
+        }}>
+          <div style={{
+            width: 72, height: 72, borderRadius: 22,
+            background: C.successSoft, margin: "0 auto 20px",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 36,
+          }}>
+            ✓
+          </div>
+          <div style={{
+            fontSize: 26, fontWeight: 800, color: C.text,
+            letterSpacing: -0.8, lineHeight: 1.2, marginBottom: 8,
+          }}>
+            You're all set
+          </div>
+          <div style={{ fontSize: 15, color: C.textSec, lineHeight: 1.5 }}>
+            {slot.type === "live"
+              ? `Walk in on ${day.fullDate}`
+              : `${day.fullDate} at ${slot.time}`
+            }
+          </div>
+        </div>
+
+        {/* Details card */}
+        <div style={{
+          padding: "24px", background: C.surface, borderRadius: 20,
+          border: `1px solid ${C.border}`, marginBottom: 16,
+        }}>
+          <div style={{ display: "flex", gap: 14, marginBottom: 16, alignItems: "center" }}>
+            <span><Icon.MapPin size={24} color={C.textSec} /></span>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{order.location}</div>
+              <div style={{ fontSize: 13, color: C.textSec }}>{order.address}</div>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 14, marginBottom: 16, alignItems: "center" }}>
+            <span><Icon.Package size={24} color={C.textSec} /></span>
+            <div style={{ fontSize: 14, color: C.text }}>
+              {order.items.length} item{order.items.length > 1 ? "s" : ""} · {order.total}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+            <span><Icon.IdCard size={24} color={C.textSec} /></span>
+            <div style={{ fontSize: 14, color: C.textSec }}>
+              Bring a valid photo ID
+            </div>
+          </div>
+        </div>
+
+        {/* Post-booking actions */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <button onClick={() => setAddedToCal(true)} style={{
+            width: "100%", padding: "16px 20px", borderRadius: 16,
+            background: addedToCal ? C.successSoft : C.surface,
+            border: `1.5px solid ${addedToCal ? C.success : C.border}`,
+            cursor: "pointer", fontFamily: font,
+            display: "flex", alignItems: "center", gap: 14,
+            transition: "all .15s",
+          }}>
+            <span><Icon.CalendarPlus size={20} color={C.text} /></span>
+            <span style={{
+              fontSize: 14, fontWeight: 600,
+              color: addedToCal ? C.success : C.text,
+            }}>
+              {addedToCal ? "Added to calendar ✓" : "Add to calendar"}
+            </span>
+          </button>
+
+          <button style={{
+            width: "100%", padding: "16px 20px", borderRadius: 16,
+            background: C.surface, border: `1.5px solid ${C.border}`,
+            cursor: "pointer", fontFamily: font,
+            display: "flex", alignItems: "center", gap: 14,
+          }}>
+            <span><Icon.UsersThree size={20} color={C.text} /></span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>
+              Can't make it? Send to someone
+            </span>
+          </button>
+
+          <button style={{
+            width: "100%", padding: "16px 20px", borderRadius: 16,
+            background: C.surface, border: `1.5px solid ${C.border}`,
+            cursor: "pointer", fontFamily: font,
+            display: "flex", alignItems: "center", gap: 14,
+          }}>
+            <span><Icon.Receipt size={20} color={C.text} /></span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>
+              View invoice
+            </span>
+          </button>
+        </div>
+
+        <div style={{ marginTop: 24 }}>
+          <BigButton onClick={onDone}>
+            Done
+          </BigButton>
+        </div>
+      </div>
+    </>
+  );
+}
+/* SIDEBAR */
+function ScreenLabel({ step }) {
+  const labels = {
+    triage: { num: "01", title: "Triage", desc: "One glance: what needs attention? Payment issues surface first (blocking), then schedulable orders." },
+    payment: { num: "—", title: "Fix Payment", desc: "Isolated path. No scheduling noise. Single focused action." },
+    confirm_order: { num: "02", title: "What", desc: "Inverted from current flow. Items + location + deadline shown BEFORE calendar. Orders determine available days." },
+    pick_day: { num: "03", title: "When", desc: "Only valid days shown. Each day labeled: Appointment / Walk-in. Slot availability visible upfront." },
+    pick_time: { num: "04", title: "Time", desc: "Unavailable slots explain WHY (Full / Cutoff). No mystery X marks. Or: walk-in day = skip this screen." },
+    done: { num: "05", title: "Care", desc: "Post-booking matters. Add to calendar. Delegate. Invoice. ID reminder. Not a dead end." },
+  };
+  const l = labels[step] || labels.triage;
+  return (
+    <div style={{
+      width: 220, padding: "0 28px", display: "flex",
+      flexDirection: "column", justifyContent: "center",
+      fontFamily: font,
+    }}>
+      <div style={{
+        fontSize: 64, fontWeight: 800, color: "#E8E8E4",
+        letterSpacing: -3, lineHeight: 1, marginBottom: 8,
+      }}>
+        {l.num}
+      </div>
+      <div style={{
+        fontSize: 20, fontWeight: 700, color: "#1A1A1A",
+        marginBottom: 10, letterSpacing: -0.3,
+      }}>
+        {l.title}
+      </div>
+      <div style={{
+        fontSize: 13, color: "#8A8A82", lineHeight: 1.65,
+      }}>
+        {l.desc}
+      </div>
+    </div>
+  );
+}
+/* APP */
+function App() {
+  const [screen, setScreen] = useState("triage");
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [selectedDay, setSelectedDay] = useState(null);
+  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [showAnnotations, setShowAnnotations] = useState(true);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === "n" || e.key === "N") {
+        setShowAnnotations(a => !a);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+  const handleSelectOrder = (order) => {
+    setSelectedOrder(order);
+    if (order.status === "failed") {
+      setScreen("payment");
+    } else {
+      setScreen("confirm_order");
+    }
+  };
+
+  const handleSelectDay = (day) => {
+    setSelectedDay(day);
+    setScreen("pick_time");
+  };
+
+  const handleSelectTime = (slot) => {
+    setSelectedSlot(slot);
+    setScreen("done");
+  };
+
+  const goBack = (to) => () => {
+    setScreen(to);
+  };
+
+  const reset = () => {
+    setScreen("triage");
+    setSelectedOrder(null);
+    setSelectedDay(null);
+    setSelectedSlot(null);
+  };
+
+  return (
+    <div style={{
+      minHeight: "100vh",
+      background: "#F0EFEB",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 0,
+      fontFamily: font,
+      padding: "40px 0",
+    }}>
+      <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+      {/* Annotation panel — left */}
+      <div style={{
+        width: showAnnotations ? 220 : 0,
+        opacity: showAnnotations ? 1 : 0,
+        overflow: "hidden",
+        transition: "all .35s cubic-bezier(.4,0,.2,1)",
+        flexShrink: 0,
+      }}>
+        <ScreenLabel step={screen} />
+      </div>
+
+      {/* Phone */}
+      <Phone>
+        {screen === "triage" && (
+          <TriageScreen onSelectOrder={handleSelectOrder} />
+        )}
+        {screen === "payment" && (
+          <PaymentFixScreen order={selectedOrder} onBack={goBack("triage")} />
+        )}
+        {screen === "confirm_order" && (
+          <OrderConfirmScreen
+            order={selectedOrder}
+            onBack={goBack("triage")}
+            onNext={() => setScreen("pick_day")}
+          />
+        )}
+        {screen === "pick_day" && (
+          <DayPickerScreen
+            onBack={goBack("confirm_order")}
+            onSelectDay={handleSelectDay}
+          />
+        )}
+        {screen === "pick_time" && selectedDay && (
+          <TimePickerScreen
+            day={selectedDay}
+            onBack={goBack("pick_day")}
+            onSelectTime={handleSelectTime}
+          />
+        )}
+        {screen === "done" && (
+          <ConfirmScreen
+            order={selectedOrder}
+            day={selectedDay}
+            slot={selectedSlot}
+            onDone={reset}
+          />
+        )}
+      </Phone>
+
+      {/* Right annotation: current vs proposed */}
+      <div style={{
+        width: showAnnotations ? 200 : 0,
+        opacity: showAnnotations ? 1 : 0,
+        overflow: "hidden",
+        transition: "all .35s cubic-bezier(.4,0,.2,1)",
+        flexShrink: 0,
+      }}>
+        <div style={{
+          width: 200, padding: "0 28px", display: "flex",
+          flexDirection: "column", justifyContent: "center",
+          fontFamily: font,
+        }}>
+          <div style={{
+            fontSize: 11, fontWeight: 700, color: "#B5B5AD",
+            textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 16,
+          }}>
+            Principle
+          </div>
+          <div style={{
+            fontSize: 15, fontWeight: 600, color: "#1A1A1A",
+            lineHeight: 1.5, marginBottom: 20, letterSpacing: -0.2,
+          }}>
+            "At any moment, there should be exactly one thing to do, and it should be obvious."
+          </div>
+          <div style={{
+            fontSize: 12, color: "#8A8A82", lineHeight: 1.6,
+          }}>
+            Each screen asks one question. The user gives one answer. The system handles everything else.
+          </div>
+
+          <div style={{
+            marginTop: 32, padding: "16px", background: "#fff",
+            borderRadius: 14, fontSize: 12, lineHeight: 1.6,
+          }}>
+            <div style={{ fontWeight: 700, color: "#1A1A1A", marginBottom: 6 }}>Key changes</div>
+            <div style={{ color: "#8A8A82" }}>
+              ✓ Items before calendar<br/>
+              ✓ Payment isolated<br/>
+              ✓ Days labeled by type<br/>
+              ✓ Slots explain "why not"<br/>
+              ✓ Post-booking actions<br/>
+              ✓ Deadline urgency color
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
