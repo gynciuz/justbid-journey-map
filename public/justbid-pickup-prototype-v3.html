@@ -310,7 +310,7 @@ function ItemListScreen({ items, title, onBack }) {
    F13: item preview on appointment
    ═══════════════════════════════════════ */
 
-function TriageScreen({ onTapOrder, hasAppointment, appointmentData, onTapAppointment, onViewItems }) {
+function TriageScreen({ onTapOrder, appointments, onTapAppointment, onViewItems }) {
   const pending = ALL_ORDERS.filter(o => o.status === "pending");
   const failed = ALL_ORDERS.filter(o => o.status === "failed");
   const paid = ALL_ORDERS.filter(o => o.status === "paid");
@@ -322,29 +322,34 @@ function TriageScreen({ onTapOrder, hasAppointment, appointmentData, onTapAppoin
     paidByLoc[k].orders.push(o);
   });
 
+  const apptEntries = Object.entries(appointments);
+
   return (
     <>
       <TopBar title="Pickups" />
       <div style={{ flex: 1, overflow: "auto", padding: "0 20px 100px" }}>
 
-        {/* Upcoming appointment — F13: add item count card */}
-        {hasAppointment && (
+        {/* Per-location appointments */}
+        {apptEntries.length > 0 && (
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 7, height: 7, borderRadius: "50%", background: C.accent }} /> Upcoming appointment
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: C.accent }} /> Upcoming appointment{apptEntries.length > 1 ? "s" : ""}
             </div>
-            <button onClick={onTapAppointment} style={{ width: "100%", padding: "18px", background: C.accentSoft, borderRadius: 18, border: `1.5px solid ${C.accent}30`, cursor: "pointer", textAlign: "left", fontFamily: font }}>
-              <div style={{ fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 4 }}>{appointmentData.day} at {appointmentData.time}</div>
-              <div style={{ fontSize: 13, color: C.textSec, marginBottom: 4 }}>{appointmentData.location}</div>
-              <ItemCountCard
-                itemCount={appointmentData.items}
-                onTap={(e) => { e?.stopPropagation?.(); onViewItems(appointmentData.itemsList || [], `${appointmentData.items} items`); }}
-              />
-              <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                <Badge color={C.accent} bg={`${C.accent}15`}>Reschedule</Badge>
-                <Badge color={C.textSec} bg={C.surfaceAlt}>Cancel</Badge>
-              </div>
-            </button>
+            {apptEntries.map(([locId, appt]) => (
+              <button key={locId} onClick={() => onTapAppointment(locId)} style={{ width: "100%", padding: "18px", background: C.accentSoft, borderRadius: 18, border: `1.5px solid ${C.accent}30`, cursor: "pointer", textAlign: "left", fontFamily: font, marginBottom: 8 }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 4 }}>{appt.day} at {appt.time}</div>
+                <div style={{ fontSize: 13, color: C.textSec, marginBottom: 4 }}>{appt.location}</div>
+                <ItemCountCard
+                  itemCount={appt.items}
+                  onTap={(e) => { e?.stopPropagation?.(); onViewItems(appt.itemsList || [], `${appt.items} items`); }}
+                />
+                <div style={{ fontSize: 11, color: C.accent, marginTop: 8, lineHeight: 1.4 }}>New wins at this location are automatically included.</div>
+                <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                  <Badge color={C.accent} bg={`${C.accent}15`}>Reschedule</Badge>
+                  <Badge color={C.textSec} bg={C.surfaceAlt}>Cancel</Badge>
+                </div>
+              </button>
+            ))}
           </div>
         )}
 
@@ -392,44 +397,96 @@ function TriageScreen({ onTapOrder, hasAppointment, appointmentData, onTapAppoin
           </div>
         )}
 
-        {/* Ready — F4: deadline range, F10: no combined $ for multi-invoice */}
-        {Object.keys(paidByLoc).length > 0 && (
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.success, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 7, height: 7, borderRadius: "50%", background: C.success }} /> Ready to schedule
-            </div>
-            {Object.values(paidByLoc).map(({ location, orders }) => {
-              const totalItems = orders.reduce((s, o) => s + o.itemCount, 0);
-              const minDays = Math.min(...orders.map(o => o.daysLeft));
-              const maxDays = Math.max(...orders.map(o => o.daysLeft));
-              const isMulti = orders.length > 1;
-              return (
-                <button key={location.id} onClick={() => onTapOrder({ type: "schedule", location, orders })} style={{
-                  width: "100%", padding: "18px", background: C.surface, borderRadius: 18, border: `1px solid ${C.border}`,
-                  cursor: "pointer", textAlign: "left", fontFamily: font, marginBottom: 8,
-                }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                    {/* F10: single invoice = show $, multi = "multiple invoices" */}
-                    <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>
-                      {totalItems} items{!isMulti ? ` · ${orders[0].total}` : ""}
-                    </span>
-                    {/* F4: deadline range */}
-                    <DeadlineBadge daysLeft={minDays} daysLeftMax={maxDays !== minDays ? maxDays : undefined} />
-                  </div>
-                  <div style={{ fontSize: 13, color: C.textSec, marginBottom: 2 }}>{location.name}</div>
-                  {/* F3/F6: inline text for type, keep won date */}
-                  {orders.map(o => (
-                    <div key={o.id} style={{ fontSize: 12, color: C.textTer, marginTop: 4 }}>
-                      Won {o.auction} · {o.itemCount} {o.type === "lastchance" ? "last chance" : "bid"} item{o.itemCount !== 1 ? "s" : ""} · pickup by {o.deadline}
+        {/* Ready to schedule + outstanding invoices */}
+        {(() => {
+          /* Fully unscheduled locations */
+          const unscheduledLocs = Object.values(paidByLoc).filter(({ location }) => !appointments[location.id]);
+
+          /* Outstanding invoices: location has appointment but some orders were not included */
+          const outstandingCards = [];
+          Object.values(paidByLoc).forEach(({ location, orders }) => {
+            const appt = appointments[location.id];
+            if (!appt || !appt.selectedOrderIds) return;
+            const outstanding = orders.filter(o => !appt.selectedOrderIds.includes(o.id));
+            if (outstanding.length > 0) {
+              outstandingCards.push({ location, orders: outstanding, blocked: true });
+            }
+          });
+
+          if (unscheduledLocs.length === 0 && outstandingCards.length === 0) return null;
+
+          return (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.success, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: C.success }} /> Ready to schedule
+              </div>
+
+              {/* Normal unscheduled locations */}
+              {unscheduledLocs.map(({ location, orders }) => {
+                const totalItems = orders.reduce((s, o) => s + o.itemCount, 0);
+                const minDays = Math.min(...orders.map(o => o.daysLeft));
+                const maxDays = Math.max(...orders.map(o => o.daysLeft));
+                const isMulti = orders.length > 1;
+                return (
+                  <button key={location.id} onClick={() => onTapOrder({ type: "schedule", location, orders })} style={{
+                    width: "100%", padding: "18px", background: C.surface, borderRadius: 18, border: `1px solid ${C.border}`,
+                    cursor: "pointer", textAlign: "left", fontFamily: font, marginBottom: 8,
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>
+                        {totalItems} items{!isMulti ? ` · ${orders[0].total}` : ""}
+                      </span>
+                      <DeadlineBadge daysLeft={minDays} daysLeftMax={maxDays !== minDays ? maxDays : undefined} />
                     </div>
-                  ))}
-                  {isMulti && <div style={{ fontSize: 11, color: C.textTer, marginTop: 6 }}>Multiple invoices</div>}
-                  <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.border}`, fontSize: 13, fontWeight: 600, color: C.accent }}>Schedule pickup →</div>
-                </button>
-              );
-            })}
-          </div>
-        )}
+                    <div style={{ fontSize: 13, color: C.textSec, marginBottom: 2 }}>{location.name}</div>
+                    {orders.map(o => (
+                      <div key={o.id} style={{ fontSize: 12, color: C.textTer, marginTop: 4 }}>
+                        Won {o.auction} · {o.itemCount} {o.type === "lastchance" ? "last chance" : "bid"} item{o.itemCount !== 1 ? "s" : ""} · pickup by {o.deadline}
+                      </div>
+                    ))}
+                    {isMulti && <div style={{ fontSize: 11, color: C.textTer, marginTop: 6 }}>Multiple invoices</div>}
+                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.border}`, fontSize: 13, fontWeight: 600, color: C.accent }}>Schedule pickup →</div>
+                  </button>
+                );
+              })}
+
+              {/* Outstanding invoices — disabled, can't schedule until existing appointment is done */}
+              {outstandingCards.map(({ location, orders }) => {
+                const totalItems = orders.reduce((s, o) => s + o.itemCount, 0);
+                const minDays = Math.min(...orders.map(o => o.daysLeft));
+                const maxDays = Math.max(...orders.map(o => o.daysLeft));
+                const allItems = orders.flatMap(o => o.items);
+                return (
+                  <div key={`out-${location.id}`} style={{
+                    width: "100%", padding: "18px", background: C.surface, borderRadius: 18, border: `1px solid ${C.border}`,
+                    fontFamily: font, marginBottom: 8,
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>
+                        {totalItems} items
+                      </span>
+                      <DeadlineBadge daysLeft={minDays} daysLeftMax={maxDays !== minDays ? maxDays : undefined} />
+                    </div>
+                    <div style={{ fontSize: 13, color: C.textSec, marginBottom: 2 }}>{location.name}</div>
+                    {orders.map(o => (
+                      <div key={o.id} style={{ fontSize: 12, color: C.textTer, marginTop: 4 }}>
+                        Won {o.auction} · {o.itemCount} {o.type === "lastchance" ? "last chance" : "bid"} item{o.itemCount !== 1 ? "s" : ""} · pickup by {o.deadline}
+                      </div>
+                    ))}
+                    <ItemCountCard
+                      itemCount={totalItems}
+                      itemLabel={`${totalItems} item${totalItems !== 1 ? "s" : ""} not scheduled`}
+                      onTap={() => onViewItems(allItems, `Outstanding at ${location.name}`)}
+                    />
+                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.border}`, fontSize: 12, color: C.warn, fontWeight: 600, lineHeight: 1.5, padding: "10px 12px", background: C.warnSoft, borderRadius: 10, marginTop: 12 }}>
+                      Not included in your current appointment. Complete or cancel your existing pickup to schedule.
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
       </div>
       <TabBar />
     </>
@@ -949,8 +1006,8 @@ function App() {
   const [screen, setScreen] = useState("triage");
   const [ctx, setCtx] = useState({});
   const [showNotes, setShowNotes] = useState(true);
-  const [hasAppt, setHasAppt] = useState(false);
-  const [apptData, setApptData] = useState(null);
+  /* Per-location appointments: { locId: { day, time, location, address, items, auctions, itemsList, locId } } */
+  const [appointments, setAppointments] = useState({});
 
   useEffect(() => {
     const h = e => { if (e.key === "n" || e.key === "N") setShowNotes(a => !a); };
@@ -962,7 +1019,14 @@ function App() {
 
   const handleTapOrder = (o) => {
     if (o.status === "failed") go("payment", { order: o });
-    else if (o.type === "schedule") go("orders", { scheduleData: o });
+    else if (o.type === "schedule") {
+      /* Block if appointment already exists for this location */
+      if (appointments[o.location.id]) {
+        go("scheduled", { apptLocId: o.location.id });
+        return;
+      }
+      go("orders", { scheduleData: o });
+    }
   };
 
   const handleViewItems = (items, title) => {
@@ -970,9 +1034,10 @@ function App() {
   };
 
   /* F11: reschedule reuses the scheduling flow with locked invoices */
-  const handleReschedule = () => {
-    if (!apptData) return;
-    const loc = Object.values(LOCATIONS).find(l => l.name === apptData.location);
+  const handleReschedule = (locId) => {
+    const appt = appointments[locId];
+    if (!appt) return;
+    const loc = Object.values(LOCATIONS).find(l => l.name === appt.location);
     if (!loc) return;
     const paidAtLoc = ALL_ORDERS.filter(o => o.status === "paid" && o.location.id === loc.id);
     const totalItems = paidAtLoc.reduce((s, o) => s + o.itemCount, 0);
@@ -980,7 +1045,8 @@ function App() {
       selection: { selected: paidAtLoc, totalItems, deadline: paidAtLoc[0] },
       location: loc,
       isReschedule: true,
-      currentAppointment: apptData,
+      currentAppointment: appt,
+      apptLocId: locId,
     });
   };
 
@@ -996,9 +1062,8 @@ function App() {
         {screen === "triage" && (
           <TriageScreen
             onTapOrder={handleTapOrder}
-            hasAppointment={hasAppt}
-            appointmentData={apptData}
-            onTapAppointment={() => go("scheduled")}
+            appointments={appointments}
+            onTapAppointment={(locId) => go("scheduled", { apptLocId: locId })}
             onViewItems={handleViewItems}
           />
         )}
@@ -1028,7 +1093,7 @@ function App() {
             selectionSummary={ctx.selection}
             location={ctx.location}
             onBack={() => {
-              if (ctx.isReschedule) go("scheduled");
+              if (ctx.isReschedule) go("scheduled", { apptLocId: ctx.apptLocId || ctx.location?.id });
               else go("orders", { scheduleData: ctx.scheduleData || { location: ctx.location, orders: ALL_ORDERS.filter(o => o.status === "paid" && o.location.id === ctx.location?.id) } });
             }}
             onBook={(booking) => go("done", { ...ctx, booking: { ...booking, ...ctx.selection } })}
@@ -1042,29 +1107,38 @@ function App() {
             location={ctx.location}
             onDone={() => {
               const allItems = ctx.booking.selected.flatMap(o => o.items);
-              setHasAppt(true);
-              setApptData({
-                day: ctx.booking.day.full,
-                time: ctx.booking.time,
-                location: ctx.location.name,
-                address: ctx.location.address,
-                items: ctx.booking.totalItems,
-                auctions: ctx.booking.selected.length,
-                itemsList: allItems,
-              });
+              const locId = ctx.location.id;
+              const selectedIds = ctx.booking.selected.map(o => o.id);
+              setAppointments(prev => ({
+                ...prev,
+                [locId]: {
+                  day: ctx.booking.day.full,
+                  time: ctx.booking.time,
+                  location: ctx.location.name,
+                  address: ctx.location.address,
+                  items: ctx.booking.totalItems,
+                  auctions: ctx.booking.selected.length,
+                  itemsList: allItems,
+                  locId,
+                  selectedOrderIds: selectedIds,
+                },
+              }));
               go("triage");
             }}
           />
         )}
-        {screen === "scheduled" && (
+        {screen === "scheduled" && ctx.apptLocId && appointments[ctx.apptLocId] && (
           <ScheduledScreen
-            appointment={apptData}
+            appointment={appointments[ctx.apptLocId]}
             onBack={() => go("triage")}
-            onReschedule={handleReschedule}
+            onReschedule={() => handleReschedule(ctx.apptLocId)}
             onViewItems={handleViewItems}
             onCancel={() => {
-              setHasAppt(false);
-              setApptData(null);
+              setAppointments(prev => {
+                const next = { ...prev };
+                delete next[ctx.apptLocId];
+                return next;
+              });
               go("triage");
             }}
           />
@@ -1092,7 +1166,9 @@ function App() {
             ✓ Only available slots (F15)<br/>
             ✓ Book CTA kept (F16)<br/>
             ✓ No "pickup by" on pills (F17)<br/>
-            ✓ Arrival rule on confirm (F18)
+            ✓ Arrival rule on confirm (F18)<br/>
+            ✓ 1 appt per location (new)<br/>
+            ✓ New wins auto-assigned (new)
           </div>
         </div>
       </div>
