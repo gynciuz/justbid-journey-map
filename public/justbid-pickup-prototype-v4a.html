@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>JustBid Pickup Flow — v4a</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #F1F5F9; }
+  button { font-family: inherit; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+
+/* ═══════════════════════════════════════
+   ICONS
+   ═══════════════════════════════════════ */
+const I = ({ d, size = 24, color = "currentColor", sw = 1.5 }) => (
+  <svg width={size} height={size} viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d={d} stroke={color} strokeWidth={sw * (256/24)} strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+const Icon = {
+  Battery: ({ size, color }) => <I size={size} color={color} d="M32 96h168a8 8 0 018 8v48a8 8 0 01-8 8H32a8 8 0 01-8-8v-48a8 8 0 018-8zm208 16v32" />,
+  House: ({ size, color }) => <I size={size} color={color} d="M128 24L28 108h24v100h64v-64h24v64h64V108h24L128 24z" />,
+  Tag: ({ size, color }) => <I size={size} color={color} d="M40 128V48a8 8 0 018-8h80l88 88-80 80-88-88zm40-48a12 12 0 1024 0 12 12 0 00-24 0z" />,
+  Trophy: ({ size, color }) => <I size={size} color={color} d="M80 40h96v88a48 48 0 01-96 0V40zm-32 0h32m96 0h32M176 40c0 24 24 48 24 48H56s24-24 24-48m48 128v32m-32 0h64" />,
+  Heart: ({ size, color }) => <I size={size} color={color} d="M128 224S24 168 24 100a52 52 0 01104-8 52 52 0 01104 8c0 68-104 124-104 124z" />,
+  User: ({ size, color }) => <I size={size} color={color} d="M128 128a48 48 0 100-96 48 48 0 000 96zm80 96a80 80 0 00-160 0" />,
+  MapPin: ({ size, color }) => <I size={size} color={color} d="M128 24a80 80 0 00-80 80c0 72 80 128 80 128s80-56 80-128a80 80 0 00-80-80zm0 112a32 32 0 110-64 32 32 0 010 64z" />,
+  Clock: ({ size, color }) => <I size={size} color={color} d="M128 228a100 100 0 100-200 100 100 0 000 200zm0-148v48l40 24" />,
+  PersonWalk: ({ size, color }) => <I size={size} color={color} d="M152 48a24 24 0 11-48 0 24 24 0 0148 0zM96 240l16-80m48 80l-16-80m-40-40l-40 40h48l48-40m-32-16v56" />,
+  Package: ({ size, color }) => <I size={size} color={color} d="M32 80l96-48 96 48v96l-96 48-96-48V80zm0 0l96 48m0 0v96m0-96l96-48" />,
+  IdCard: ({ size, color }) => <I size={size} color={color} d="M32 64h192a8 8 0 018 8v112a8 8 0 01-8 8H32a8 8 0 01-8-8V72a8 8 0 018-8zm64 104a32 32 0 10-32-32 32 32 0 0032 32zm80-56h40m-40 32h40" />,
+  CalendarPlus: ({ size, color }) => <I size={size} color={color} d="M40 48h176a8 8 0 018 8v152a8 8 0 01-8 8H40a8 8 0 01-8-8V56a8 8 0 018-8zM176 24v48M80 24v48m-48 32h192m-96 24v48m-24-24h48" />,
+  UsersThree: ({ size, color }) => <I size={size} color={color} d="M128 144a40 40 0 100-80 40 40 0 000 80zm80 72a80 80 0 00-160 0m192-52a48 48 0 00-32-64m-144 0a48 48 0 00-32 64" />,
+  Receipt: ({ size, color }) => <I size={size} color={color} d="M40 48h176v176l-24-16-24 16-24-16-24 16-24-16-24 16-24-16-24 16V48zm48 48h80m-80 32h80m-80 32h48" />,
+  ChevronRight: ({ size, color }) => <I size={size} color={color} d="M96 48l80 80-80 80" />,
+  ExternalLink: ({ size, color }) => <I size={size} color={color} d="M152 40h64v64m0-64L120 136M104 40H56a16 16 0 00-16 16v144a16 16 0 0016 16h144a16 16 0 0016-16v-48" />,
+};
+
+/* Real JustBid product thumbnails mixed with placeholders */
+const THUMB_IMAGES = [
+  "https://i.justbid-media.com/PvxjeNciM0c6EzRdJ40zwsS_QzqZoZPsT6-W-0aDGho/rs:fit:300:300/quality:75/ex:1:ce/plain/s3://goldrush-app-media-production/item_images/5835351/bc07f9d5-33d6-446d-81ee-683c1f97e1e0.jpg",
+  "https://i.justbid-media.com/0zogkm94JZuMdSYuTQfvD-Sqq2PHyoJOuFQGdWxMDso/rs:fit:300:300/quality:75/ex:1:ce/plain/s3://goldrush-app-media-production/item_images/5506292/5f3e8bef-2452-4a8f-aec1-817fca002f6b.jpg",
+  null,
+  "https://i.justbid-media.com/4Q4YlpIXCkcdrv9cnfeRHmmVioRxrQzbK-9VeGpx2LA/rs:fit:300:300/quality:75/ex:1:ce/plain/s3://goldrush-app-media-production/item_images/5373164/ad194a94-b2fd-4e4c-a073-b59ee5c39f7d.jpg",
+  "https://i.justbid-media.com/UWdbCjbd38VuYY00F27C0cw2sfRAlwrtt_zBz84-QXM/rs:fit:300:300/quality:75/ex:1:ce/plain/s3://goldrush-app-media-production/item_images/5051241/13b32a41-a885-45f3-86eb-0cf5fa3ffbf3.jpg",
+  null,
+  "https://i.justbid-media.com/Rsl3v5Noo_m97T3RpK6ssXkPbzD-_sE_ZK5b-s6R1E4/rs:fit:300:300/quality:75/ex:1:ce/plain/s3://goldrush-app-media-production/item_images/5837458/112cdaf1-8412-429f-9d28-65e8e6221972.jpg",
+  "https://i.justbid-media.com/H7xnY2EUoUltlTXI1gQjKyDB39cRkkoib0IVkD9TbKo/rs:fit:300:300/quality:75/ex:1:ce/plain/s3://goldrush-app-media-production/item_images/5676837/cb234c47-e0f6-4e38-86e6-c0896ba4230f.jpg",
+  "https://i.justbid-media.com/m2jcG2ZY4pDAGzuzXRg8pDw9olJd86SiWeTNsWPze5E/rs:fit:300:300/quality:75/ex:1:ce/plain/s3://goldrush-app-media-production/item_images/5261855/60f4a69d-cf5b-4158-a6a2-f90d7882ea82.jpg",
+  null,
+  "https://i.justbid-media.com/n8OTggbpFAJXZ5T-5hoTZpdW4Im3v8KgGm9dsOdRNbM/rs:fit:300:300/quality:75/ex:1:ce/plain/s3://goldrush-app-media-production/item_images/5760037/1b9f79c1-42f9-4859-b6d6-a5aba8b69ca7.jpg",
+  "https://i.justbid-media.com/4fku_s13TZY0_tqA18Ni92NBd2AK9EvVmxQjjfEVH8c/rs:fit:300:300/quality:75/ex:1:ce/plain/s3://goldrush-app-media-production/item_images/5781202/51368b13-a9ec-4215-a911-c04959a14d7f.png",
+];
+
+const Thumb = ({ size = 24, index = 0 }) => {
+  const img = THUMB_IMAGES[index % THUMB_IMAGES.length];
+  if (img) {
+    return (
+      <div style={{ width: size, height: size, borderRadius: size > 30 ? 10 : 6, overflow: "hidden", flexShrink: 0, background: "#FFFFFF" }}>
+        <img src={img} width={size} height={size} style={{ display: "block", objectFit: "cover" }} />
+      </div>
+    );
+  }
+  return (
+    <div style={{ width: size, height: size, borderRadius: size > 30 ? 10 : 6, background: "rgba(255,255,255,0.85)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+      <svg width={size*.35} height={size*.35} viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="3"/><circle cx="8.5" cy="8.5" r="2"/><path d="M22 15l-5-5L2 22"/></svg>
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════
+   DATA — v3 changes:
+   - Items are objects with name+price (F2)
+   - Only available slots in data (F15)
+   - Calendar gap: no Sat 15 (F8)
+   - SAC = multi-invoice, BR = single (F10)
+   ═══════════════════════════════════════ */
+
+const LOCATIONS = {
+  sac: { id: "sac", name: "Sacramento: Belvedere Ave", address: "1720 Belvedere Ave, Sacramento, CA 95838" },
+  br: { id: "br", name: "Brookline: Sawyer Rd", address: "3000 East Sawyer Road, Brookline, MO 65619" },
+};
+
+const ALL_ORDERS = [
+  { id: "pend1", status: "pending", type: "bid", location: LOCATIONS.sac, auction: "03/11/26", itemCount: 1, total: "$4.50", items: [{ name: "Bluetooth Speaker", price: "$4.50" }], deadline: "Mon, Mar 16", daysLeft: 4 },
+  { id: "fail1", status: "failed", type: "bid", location: LOCATIONS.br, auction: "03/10/26", itemCount: 2, total: "$6.87", items: [{ name: "Cuisinart Food Processor", price: "$3.12" }, { name: "Glass Storage Set (12pc)", price: "$3.75" }], card: "*6461", failReason: "Credit card number is invalid", deadline: "Sat, Mar 14", daysLeft: 2 },
+  { id: "paid1", status: "paid", type: "bid", location: LOCATIONS.sac, auction: "03/09/26", itemCount: 2, total: "$11.75", items: [{ name: "Sterling Silver Ring Set", price: "$6.15" }, { name: "Leather Watch Band", price: "$5.60" }], deadline: "Sat, Mar 15", daysLeft: 3 },
+  { id: "paid2", status: "paid", type: "lastchance", location: LOCATIONS.sac, auction: "03/10/26", itemCount: 312, total: "$547.78", items: [{ name: "Assorted Electronics Lot", price: "$2.10" }, { name: "Kitchen Gadget Bundle", price: "$1.85" }, { name: "Home Decor Set", price: "$1.55" }], deadline: "Mon, Mar 16", daysLeft: 4 },
+  { id: "paid3", status: "paid", type: "bid", location: LOCATIONS.br, auction: "03/08/26", itemCount: 3, total: "$15.20", items: [{ name: "Cast Iron Skillet", price: "$6.40" }, { name: "Bamboo Cutting Board", price: "$4.30" }, { name: "Knife Set (Professional Grade 8-Piece Stainless Steel)", price: "$4.50" }], deadline: "Thu, Mar 13", daysLeft: 1 },
+];
+
+/* F8: Only available days. Gap: no Sat Mar 15 */
+const SAC_DAYS = [
+  { key: "thu13", label: "Thu", date: "13", full: "Thu, Mar 13", type: "both", hours: "10:00 AM - 6:00 PM", tag: "Walk-in & Appointment" },
+  { key: "fri14", label: "Fri", date: "14", full: "Fri, Mar 14", type: "appt", hours: "10:00 AM - 6:00 PM", tag: "Appointment only" },
+  /* Sat 15 intentionally missing — unavailable day (F8) */
+  { key: "mon16", label: "Mon", date: "16", full: "Mon, Mar 16", type: "appt", hours: "9:00 AM - 5:00 PM", tag: "Appointment only", isDeadline: true },
+];
+
+const BR_DAYS = [
+  { key: "wed12b", label: "Wed", date: "12", full: "Wed, Mar 12", type: "both", hours: "10:00 AM - 6:00 PM", tag: "Walk-in & Appointment" },
+  { key: "thu13b", label: "Thu", date: "13", full: "Thu, Mar 13", type: "appt", hours: "10:00 AM - 5:00 PM", tag: "Appointment only", isDeadline: true },
+];
+
+/* F15: Only available slots */
+const SAC_SLOTS = {
+  thu13: [
+    { time: "10:00 AM" }, { time: "10:30 AM" }, { time: "11:15 AM" }, { time: "11:45 AM" },
+  ],
+  fri14: [
+    { time: "9:00 AM" }, { time: "9:15 AM" }, { time: "10:00 AM" }, { time: "10:30 AM" },
+    { time: "11:00 AM" }, { time: "11:30 AM" }, { time: "1:00 PM" }, { time: "2:15 PM" },
+  ],
+  mon16: [
+    /* v4: no slots yet — rolling window hasn't reached this day */
+  ],
+};
+
+const BR_SLOTS = {
+  thu13b: [
+    { time: "10:00 AM" }, { time: "10:30 AM" }, { time: "11:00 AM" },
+  ],
+};
+
+function getDays(locId) { return locId === "sac" ? SAC_DAYS : BR_DAYS; }
+function getSlots(locId, dayKey) { return locId === "sac" ? (SAC_SLOTS[dayKey] || []) : (BR_SLOTS[dayKey] || []); }
+
+/* ═══════════════════════════════════════
+   TOKENS — v4a: JustBid theme
+   ═══════════════════════════════════════ */
+const C = {
+  bg: "#F8FAFC", surface: "#FFFFFF", surfaceAlt: "#F1F5F9",
+  text: "#020817", textSec: "#64748B", textTer: "#94A3B8",
+  accent: "#355AAC", accentSoft: "#EEF2FF",
+  success: "#22A06B", successSoft: "#E3FCEF",
+  danger: "#EF4444", dangerSoft: "#FEF2F2",
+  warn: "#F59E0B", warnSoft: "#FFF8E1",
+  pending: "#7B5FE0", pendingSoft: "#F0ECFF",
+  border: "rgba(148,163,184,0.3)",
+  appt: "#7B5FE0", apptSoft: "#F0ECFF",
+  live: "#0D8A6A", liveSoft: "#E6F7F1",
+  both: "#355AAC", bothSoft: "#EEF2FF",
+};
+const font = `'Inter', ui-sans-serif, system-ui, sans-serif`;
+
+/* ═══════════════════════════════════════
+   SHARED COMPONENTS
+   ═══════════════════════════════════════ */
+
+function Phone({ children }) {
+  return (
+    <div style={{ width: 393, maxHeight: 852, height: "100vh", background: C.bg, borderRadius: 44, overflow: "hidden", boxShadow: "0 0 0 8px #020817, 0 40px 100px rgba(0,0,0,0.25)", position: "relative", display: "flex", flexDirection: "column", fontFamily: font }}>
+      <div style={{ padding: "14px 28px 8px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 14, fontWeight: 600, color: C.text, flexShrink: 0 }}>
+        <span>11:21</span>
+        <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+          <span style={{ fontSize: 12 }}>●●●○</span>
+          <span style={{ fontSize: 12 }}>WiFi</span>
+          <Icon.Battery size={13} color={C.text} />
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function TopBar({ title, onBack }) {
+  return (
+    <div style={{ padding: "4px 20px 12px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+      {onBack && <button onClick={onBack} style={{ width: 36, height: 36, borderRadius: 12, background: C.surfaceAlt, border: "none", cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", color: C.text, flexShrink: 0 }}>←</button>}
+      <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: C.text, letterSpacing: -0.4, flex: 1 }}>{title}</h2>
+    </div>
+  );
+}
+
+function Btn({ children, onClick, variant = "primary", disabled, small }) {
+  const bg = variant === "primary" ? C.accent : variant === "danger" ? C.danger : variant === "ghost" ? "transparent" : C.surface;
+  const fg = variant === "outline" || variant === "ghost" ? C.text : "#FFFFFF";
+  const border = variant === "outline" ? `1.5px solid ${C.border}` : "none";
+  return (
+    <button onClick={onClick} disabled={disabled} style={{
+      width: variant === "ghost" ? "auto" : "100%", padding: small ? "10px 16px" : "16px 24px", borderRadius: small ? 12 : 16,
+      background: disabled ? C.textTer : bg, color: disabled ? "#fff" : fg, border, fontSize: small ? 14 : 16,
+      fontWeight: 600, cursor: disabled ? "default" : "pointer", fontFamily: font, transition: "all .15s",
+      opacity: disabled ? 0.6 : 1, textAlign: "center",
+    }}>{children}</button>
+  );
+}
+
+function Badge({ children, color, bg }) {
+  return <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6, background: bg, color, letterSpacing: 0.3, textTransform: "uppercase", whiteSpace: "nowrap" }}>{children}</span>;
+}
+
+/* F4: Deadline badge supports ranges */
+function DeadlineBadge({ daysLeft, daysLeftMax }) {
+  const d = daysLeft;
+  const c = d <= 1 ? C.danger : d <= 2 ? C.warn : C.success;
+  const bg = d <= 1 ? C.dangerSoft : d <= 2 ? C.warnSoft : C.successSoft;
+  const label = daysLeftMax && daysLeftMax !== d
+    ? `${d}-${daysLeftMax} days left`
+    : d <= 1 ? "Expires tomorrow" : `${d} days left`;
+  return <Badge color={c} bg={bg}>{label}</Badge>;
+}
+
+/* v4: ItemCountCard — 36px clickable thumbnails, +X with chevron only when overflow */
+function ItemCountCard({ itemCount, label, itemLabel, items, onTap, onTapItem }) {
+  const count = itemCount || (items ? items.length : 0);
+  const thumbSize = 44;
+  const gap = 6;
+  /* At 44+6=50px per thumb, ~6 fit in ~330px parent width */
+  const maxThumbs = Math.min(count, 5);
+  const remaining = count - maxThumbs;
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap, width: "100%", marginTop: 8 }}>
+      {Array.from({ length: maxThumbs }).map((_, i) => (
+        <button key={i} onClick={(e) => { e?.stopPropagation?.(); if (onTapItem) onTapItem(i); else if (onTap) onTap(e); }} style={{
+          padding: 0, border: "none", background: "none", cursor: "pointer", flexShrink: 0,
+        }}>
+          <Thumb size={thumbSize} index={i} />
+        </button>
+      ))}
+      {remaining > 0 && (
+        <button onClick={(e) => { e?.stopPropagation?.(); if (onTap) onTap(e); }} style={{
+          display: "flex", alignItems: "center", gap: 4,
+          padding: 0, border: "none", background: "none",
+          cursor: "pointer", fontFamily: font, flexShrink: 0,
+        }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: C.textSec }}>+{remaining}</span>
+          <Icon.ChevronRight size={14} color={C.textTer} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function Steps({ current, labels = ["Items", "When", "Done"] }) {
+  return (
+    <div style={{ display: "flex", gap: 4, marginBottom: 20, padding: "0 4px", alignItems: "center" }}>
+      {labels.map((s, i) => (
+        <React.Fragment key={i}>
+          <div style={{
+            padding: i <= current ? "2px 10px" : "2px 6px", borderRadius: 6, fontSize: 10, fontWeight: 700, color: "#fff",
+            background: i < current ? C.success : i === current ? C.accent : C.border,
+            display: "flex", alignItems: "center", justifyContent: "center", transition: "all .2s",
+          }}>{i < current ? "✓" : i === current ? s : ""}</div>
+          {i < labels.length - 1 && <div style={{ flex: 1, height: 2, background: i < current ? C.success : C.border, borderRadius: 1 }} />}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+function TabBar() {
+  const tabs = [
+    { id: "home", label: "Home", Ic: Icon.House },
+    { id: "bids", label: "Bids", Ic: Icon.Tag },
+    { id: "wins", label: "Wins", Ic: Icon.Trophy },
+    { id: "wish", label: "Wishlist", Ic: Icon.Heart },
+    { id: "profile", label: "Profile", Ic: Icon.User },
+  ];
+  return (
+    <div style={{ display: "flex", justifyContent: "space-around", padding: "10px 0 28px", background: C.surface, borderTop: `1px solid ${C.border}`, flexShrink: 0 }}>
+      {tabs.map(t => (
+        <div key={t.id} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, fontSize: 10, fontWeight: 600, color: t.id === "wins" ? C.accent : C.textTer }}>
+          <t.Ic size={20} color={t.id === "wins" ? C.accent : C.textTer} />
+          {t.label}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DayTypeColor(type) {
+  if (type === "appt") return { c: C.appt, bg: C.apptSoft };
+  if (type === "walkin") return { c: C.live, bg: C.liveSoft };
+  return { c: C.both, bg: C.bothSoft };
+}
+
+/* ═══════════════════════════════════════
+   MAP CARD — v4: tappable, "Open in Maps"
+   Used on confirmation + scheduled screen
+   ═══════════════════════════════════════ */
+function MapCard({ location }) {
+  return (
+    <div style={{ borderRadius: 16, overflow: "hidden", border: `1px solid ${C.border}`, background: C.surface, marginBottom: 14 }}>
+      <div style={{ height: 120, background: `linear-gradient(135deg, #E8F4E8 0%, #D4E8D4 40%, #C8DCC8 100%)`, position: "relative" }}>
+        <svg width="100%" height="100%" viewBox="0 0 353 120" preserveAspectRatio="xMidYMid slice" style={{ position: "absolute", top: 0, left: 0 }}>
+          <line x1="0" y1="50" x2="353" y2="50" stroke="#D5D0C8" strokeWidth="12" opacity="0.5" />
+          <line x1="0" y1="85" x2="353" y2="85" stroke="#D5D0C8" strokeWidth="8" opacity="0.4" />
+          <line x1="120" y1="0" x2="120" y2="120" stroke="#D5D0C8" strokeWidth="8" opacity="0.4" />
+          <line x1="240" y1="0" x2="240" y2="120" stroke="#D5D0C8" strokeWidth="10" opacity="0.5" />
+          <rect x="50" y="58" width="60" height="20" rx="2" fill="#C8C0B5" opacity="0.35" />
+          <rect x="250" y="15" width="50" height="30" rx="2" fill="#C8C0B5" opacity="0.3" />
+          <rect x="130" y="58" width="45" height="22" rx="2" fill="#C8C0B5" opacity="0.3" />
+          <rect x="20" y="10" width="35" height="35" rx="2" fill="#C8C0B5" opacity="0.25" />
+          <rect x="290" y="60" width="40" height="18" rx="2" fill="#C8C0B5" opacity="0.3" />
+          <g transform="translate(176, 30)">
+            <ellipse cx="0" cy="28" rx="8" ry="3" fill="rgba(0,0,0,0.15)" />
+            <path d="M0-12c-8.8 0-16 7.2-16 16 0 12 16 22 16 22s16-10 16-22c0-8.8-7.2-16-16-16z" fill="#E34935" />
+            <circle cx="0" cy="4" r="5" fill="white" />
+          </g>
+        </svg>
+        <button style={{
+          position: "absolute", top: 10, left: 10, display: "flex", alignItems: "center", gap: 5,
+          padding: "6px 12px", borderRadius: 8, background: "rgba(255,255,255,0.95)", border: "none",
+          cursor: "pointer", fontFamily: font, fontSize: 11, fontWeight: 600, color: C.accent,
+          boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
+        }}>
+          Open in Maps <Icon.ExternalLink size={12} color={C.accent} />
+        </button>
+      </div>
+      <div style={{ padding: "14px 16px" }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{location.name}</div>
+        <div style={{ fontSize: 12, color: C.textSec, marginTop: 2 }}>{location.address}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════
+   SCREEN: ITEM LIST (F2: bigger thumbnails, long names)
+   Reusable page — opened from ItemCountCard
+   ═══════════════════════════════════════ */
+
+function ItemListScreen({ items, title, onBack, onViewSingleItem }) {
+  return (
+    <>
+      <TopBar title={title || "Items"} onBack={onBack} />
+      <div style={{ flex: 1, overflow: "auto", padding: "0 20px 40px" }}>
+        <div style={{ fontSize: 12, color: C.textTer, marginBottom: 12 }}>Tap an item to view auction details.</div>
+        {items.map((it, i) => (
+          <button key={i} onClick={() => onViewSingleItem(i)} style={{
+            display: "flex", gap: 14, alignItems: "center", width: "100%",
+            padding: "14px 0", borderBottom: i < items.length - 1 ? `1px solid ${C.border}` : "none",
+            background: "transparent", border: "none", cursor: "pointer", fontFamily: font, textAlign: "left",
+          }}>
+            <Thumb size={56} index={i} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 500, color: C.text, lineHeight: 1.4, wordWrap: "break-word" }}>
+                {typeof it === "string" ? it : it.name}
+              </div>
+              {it.price && <div style={{ fontSize: 13, color: C.textSec, marginTop: 2 }}>{it.price}</div>}
+            </div>
+            <Icon.ChevronRight size={14} color={C.textTer} />
+          </button>
+        ))}
+      </div>
+    </>
+  );
+}
+
+/* ═══════════════════════════════════════
+   SCREEN: SINGLE ITEM — standalone auction detail
+   Back returns to wherever user came from
+   ═══════════════════════════════════════ */
+
+function SingleItemScreen({ item, itemIndex, onBack }) {
+  const name = typeof item === "string" ? item : item.name;
+  return (
+    <>
+      <TopBar title="Auction detail" onBack={onBack} />
+      <div style={{ flex: 1, overflow: "auto", padding: "0 20px 40px" }}>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 20, marginTop: 20 }}>
+          <Thumb size={120} index={itemIndex || 0} />
+        </div>
+        <div style={{ fontSize: 16, fontWeight: 600, color: C.text, lineHeight: 1.4, marginBottom: 8 }}>{name}</div>
+        {item.price && <div style={{ fontSize: 14, color: C.textSec }}>{item.price}</div>}
+        <div style={{ fontSize: 12, color: C.textTer, marginTop: 16, lineHeight: 1.6 }}>
+          Auction detail placeholder. In the real app this would show the full auction page with photos, description, bid history, and condition details.
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ═══════════════════════════════════════
+   SCREEN: TRIAGE
+   F4: deadline range
+   F10: no combined $ for multi-invoice
+   F12: item preview on pending
+   F13: item preview on appointment
+   ═══════════════════════════════════════ */
+
+function TriageScreen({ onTapOrder, appointments, onTapAppointment, onViewItems, onViewSingleItem }) {
+  const pending = ALL_ORDERS.filter(o => o.status === "pending");
+  const failed = ALL_ORDERS.filter(o => o.status === "failed");
+  const paid = ALL_ORDERS.filter(o => o.status === "paid");
+
+  const paidByLoc = {};
+  paid.forEach(o => {
+    const k = o.location.id;
+    if (!paidByLoc[k]) paidByLoc[k] = { location: o.location, orders: [] };
+    paidByLoc[k].orders.push(o);
+  });
+
+  const apptEntries = Object.entries(appointments);
+
+  return (
+    <>
+      <TopBar title="Pickups" />
+      <div style={{ flex: 1, overflow: "auto", padding: "0 20px 100px" }}>
+
+        {/* Per-location appointments */}
+        {apptEntries.length > 0 && (
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: C.accent }} /> Upcoming appointment{apptEntries.length > 1 ? "s" : ""}
+            </div>
+            {apptEntries.map(([locId, appt]) => (
+              <button key={locId} onClick={() => onTapAppointment(locId)} style={{ width: "100%", padding: "18px", background: C.surface, borderRadius: 18, border: `1.5px solid ${C.accent}40`, cursor: "pointer", textAlign: "left", fontFamily: font, marginBottom: 8 }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 4 }}>{appt.day} at {appt.time}</div>
+                <div style={{ fontSize: 13, color: C.textSec, marginBottom: 4 }}>{appt.location}</div>
+                <ItemCountCard
+                  itemCount={appt.items}
+                  onTap={(e) => { e?.stopPropagation?.(); onViewItems(appt.itemsList || [], `${appt.items} items`); }}
+                  onTapItem={(i) => onViewSingleItem(appt.itemsList || [], `${appt.items} items`, i)}
+                />
+                <div style={{ fontSize: 11, color: C.accent, marginTop: 8, lineHeight: 1.4 }}>New wins at this location are automatically included.</div>
+                <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                  <Badge color={C.accent} bg={`${C.accent}15`}>Reschedule</Badge>
+                  <Badge color={C.textSec} bg={C.surfaceAlt}>Cancel</Badge>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Pending — F12: add item count card */}
+        {pending.length > 0 && (
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.pending, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: C.pending }} /> Payment processing
+            </div>
+            {pending.map(o => (
+              <div key={o.id} style={{ padding: "16px 18px", background: C.surface, borderRadius: 18, border: `1.5px solid ${C.pending}40`, marginBottom: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{o.items.length} item{o.items.length !== 1 ? "s" : ""} · {o.total}</span>
+                  <Badge color={C.pending} bg={`${C.pending}15`}>Processing</Badge>
+                </div>
+                <div style={{ fontSize: 13, color: C.textSec, marginBottom: 4 }}>{o.location.name}</div>
+                <div style={{ fontSize: 12, color: C.pending, lineHeight: 1.5 }}>You won. Payment is processing. Once confirmed, you can schedule pickup.</div>
+                <ItemCountCard
+                  itemCount={o.items.length}
+                  onTap={() => onViewItems(o.items, `${o.items.length} item${o.items.length !== 1 ? "s" : ""}`)}
+                  onTapItem={(i) => onViewSingleItem(o.items, `${o.items.length} item${o.items.length !== 1 ? "s" : ""}`, i)}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Failed */}
+        {failed.length > 0 && (
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.danger, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: C.danger }} /> Needs payment
+            </div>
+            {failed.map(o => (
+              <button key={o.id} onClick={() => onTapOrder(o)} style={{ width: "100%", padding: "18px", background: C.surface, borderRadius: 18, border: `1.5px solid ${C.danger}40`, cursor: "pointer", textAlign: "left", fontFamily: font, marginBottom: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{o.itemCount} item{o.itemCount > 1 ? "s" : ""} · {o.total}</span>
+                  <Badge color={C.danger} bg={C.dangerSoft}>Failed</Badge>
+                </div>
+                <div style={{ fontSize: 13, color: C.textSec, marginBottom: 4 }}>{o.location.name}</div>
+                <div style={{ fontSize: 12, color: C.danger }}>{o.failReason} · Card {o.card}</div>
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.border}`, fontSize: 13, fontWeight: 600, color: C.danger }}>Fix payment →</div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Ready to schedule + outstanding invoices */}
+        {(() => {
+          /* Fully unscheduled locations */
+          const unscheduledLocs = Object.values(paidByLoc).filter(({ location }) => !appointments[location.id]);
+
+          /* Outstanding invoices: location has appointment but some orders were not included */
+          const outstandingCards = [];
+          Object.values(paidByLoc).forEach(({ location, orders }) => {
+            const appt = appointments[location.id];
+            if (!appt || !appt.selectedOrderIds) return;
+            const outstanding = orders.filter(o => !appt.selectedOrderIds.includes(o.id));
+            if (outstanding.length > 0) {
+              outstandingCards.push({ location, orders: outstanding, blocked: true });
+            }
+          });
+
+          if (unscheduledLocs.length === 0 && outstandingCards.length === 0) return null;
+
+          return (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.success, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: C.success }} /> Ready to schedule
+              </div>
+
+              {/* Normal unscheduled locations */}
+              {unscheduledLocs.map(({ location, orders }) => {
+                const totalItems = orders.reduce((s, o) => s + o.itemCount, 0);
+                const minDays = Math.min(...orders.map(o => o.daysLeft));
+                const maxDays = Math.max(...orders.map(o => o.daysLeft));
+                const isMulti = orders.length > 1;
+                return (
+                  <button key={location.id} onClick={() => onTapOrder({ type: "schedule", location, orders })} style={{
+                    width: "100%", padding: "18px", background: C.surface, borderRadius: 18, border: `1px solid ${C.border}`,
+                    cursor: "pointer", textAlign: "left", fontFamily: font, marginBottom: 8,
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>
+                        {totalItems} items{!isMulti ? ` · ${orders[0].total}` : ""}
+                      </span>
+                      <DeadlineBadge daysLeft={minDays} daysLeftMax={maxDays !== minDays ? maxDays : undefined} />
+                    </div>
+                    <div style={{ fontSize: 13, color: C.textSec, marginBottom: 2 }}>{location.name}</div>
+                    {orders.map(o => (
+                      <div key={o.id} style={{ fontSize: 12, color: C.textTer, marginTop: 4 }}>
+                        Won {o.auction} · {o.itemCount} {o.type === "lastchance" ? "last chance" : "bid"} item{o.itemCount !== 1 ? "s" : ""} · pickup by {o.deadline}
+                      </div>
+                    ))}
+                    {isMulti && <div style={{ fontSize: 11, color: C.textTer, marginTop: 6 }}>Multiple invoices</div>}
+                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.border}`, fontSize: 13, fontWeight: 600, color: C.accent }}>Schedule pickup →</div>
+                  </button>
+                );
+              })}
+
+              {/* Outstanding invoices — disabled, can't schedule until existing appointment is done */}
+              {outstandingCards.map(({ location, orders }) => {
+                const totalItems = orders.reduce((s, o) => s + o.itemCount, 0);
+                const minDays = Math.min(...orders.map(o => o.daysLeft));
+                const maxDays = Math.max(...orders.map(o => o.daysLeft));
+                const allItems = orders.flatMap(o => o.items);
+                return (
+                  <div key={`out-${location.id}`} style={{
+                    width: "100%", padding: "18px", background: C.surface, borderRadius: 18, border: `1px solid ${C.border}`,
+                    fontFamily: font, marginBottom: 8,
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>
+                        {totalItems} items
+                      </span>
+                      <DeadlineBadge daysLeft={minDays} daysLeftMax={maxDays !== minDays ? maxDays : undefined} />
+                    </div>
+                    <div style={{ fontSize: 13, color: C.textSec, marginBottom: 2 }}>{location.name}</div>
+                    {orders.map(o => (
+                      <div key={o.id} style={{ fontSize: 12, color: C.textTer, marginTop: 4 }}>
+                        Won {o.auction} · {o.itemCount} {o.type === "lastchance" ? "last chance" : "bid"} item{o.itemCount !== 1 ? "s" : ""} · pickup by {o.deadline}
+                      </div>
+                    ))}
+                    <ItemCountCard
+                      itemCount={totalItems}
+                      onTap={() => onViewItems(allItems, `Outstanding at ${location.name}`)}
+                      onTapItem={(i) => onViewSingleItem(allItems, `Outstanding at ${location.name}`, i)}
+                    />
+                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.border}`, fontSize: 12, color: C.warn, fontWeight: 600, lineHeight: 1.5, padding: "10px 12px", background: C.warnSoft, borderRadius: 10, marginTop: 12 }}>
+                      Not included in your current appointment. Complete or cancel your existing pickup to schedule.
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
+      </div>
+      <TabBar />
+    </>
+  );
+}
+
+/* ═══════════════════════════════════════
+   SCREEN: PAYMENT FIX
+   F14: item count card (reuse pattern), opens item list
+   ═══════════════════════════════════════ */
+
+function PaymentScreen({ order, onBack, onViewItems, onViewSingleItem }) {
+  return (
+    <>
+      <TopBar title="Fix payment" onBack={onBack} />
+      <div style={{ flex: 1, overflow: "auto", padding: "0 20px 40px" }}>
+        <div style={{ padding: "20px", background: C.dangerSoft, borderRadius: 18, marginBottom: 20 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: C.danger }}>Credit card {order.card} number is invalid</div>
+        </div>
+
+        <div style={{ fontSize: 11, fontWeight: 700, color: C.textSec, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>Items at risk</div>
+        <div style={{ padding: "16px 18px", background: C.surface, borderRadius: 16, border: `1px solid ${C.border}`, marginBottom: 6 }}>
+          <div style={{ fontSize: 13, color: C.textSec, marginBottom: 8 }}>{order.location.name}</div>
+          {/* F14: reusable item count card instead of inline list */}
+          <ItemCountCard
+            itemCount={order.items.length}
+            onTap={() => onViewItems(order.items, "Items at risk")}
+            onTapItem={(i) => onViewSingleItem(order.items, "Items at risk", i)}
+          />
+        </div>
+
+        <div style={{ padding: "16px 18px", background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, marginTop: 16, marginBottom: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+            <span style={{ fontSize: 13, color: C.textSec }}>Amount</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: C.text }}>{order.total}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 13, color: C.textSec }}>Deadline</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: C.danger }}>{order.deadline}</span>
+          </div>
+        </div>
+
+        <Btn variant="danger">Retry with {order.card}</Btn>
+        <div style={{ height: 8 }} />
+        <Btn variant="outline">Change card</Btn>
+      </div>
+    </>
+  );
+}
+
+/* ═══════════════════════════════════════
+   SCREEN: ORDER SELECTION (Wins Select)
+   F1: contextual rule sentence
+   F3: type as inline text, no colored badges
+   F5: pre-checked disabled checkbox (greyed out)
+   F6: keep won date
+   F7: keep summary bar
+   ═══════════════════════════════════════ */
+
+function OrderSelectScreen({ data, onBack, onNext, onViewItems, onViewSingleItem }) {
+  if (!data) return <><TopBar title="Schedule pickup" onBack={onBack} /><div style={{ padding: 20, color: C.textSec }}>Loading...</div></>;
+  const { location, orders } = data;
+  const [selected, setSelected] = useState(orders.map(o => o.id));
+
+  const toggle = (id) => {
+    const idx = orders.findIndex(o => o.id === id);
+    if (idx === 0) return; // oldest is locked
+    setSelected(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(sid => {
+          const sidx = orders.findIndex(o => o.id === sid);
+          return sidx < idx;
+        });
+      } else {
+        const newSel = [];
+        for (let i = 0; i <= idx; i++) newSel.push(orders[i].id);
+        return newSel;
+      }
+    });
+  };
+
+  const selOrders = orders.filter(o => selected.includes(o.id));
+  const totalItems = selOrders.reduce((s, o) => s + o.itemCount, 0);
+  const earliestDeadline = selOrders.length > 0 ? selOrders.reduce((m, o) => o.daysLeft < m.daysLeft ? o : m) : null;
+
+  return (
+    <>
+      <TopBar title="Schedule pickup" onBack={onBack} />
+      <div style={{ flex: 1, overflow: "auto", padding: "0 20px 40px" }}>
+        <Steps current={0} />
+
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+          <Icon.MapPin size={16} color={C.textSec} />
+          <span style={{ fontSize: 13, color: C.textSec }}>{location.name}</span>
+        </div>
+
+        {/* F1: contextual rule */}
+        <div style={{ fontSize: 12, color: C.textTer, marginTop: 8, marginBottom: 12, lineHeight: 1.5 }}>
+          Oldest invoice must be included in every pickup.
+        </div>
+
+        {/* F7: summary bar */}
+        {selOrders.length > 0 && (
+          <div style={{ padding: "12px 16px", background: C.accentSoft, borderRadius: 12, marginBottom: 16 }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: C.accent }}>
+              {totalItems} items · {selOrders.length} invoice{selOrders.length > 1 ? "s" : ""}
+            </span>
+            <span style={{ fontSize: 13, color: C.textSec, marginLeft: 8 }}>
+              pickup by {earliestDeadline.deadline}
+            </span>
+          </div>
+        )}
+
+        <div style={{ fontSize: 11, fontWeight: 700, color: C.textSec, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10, marginTop: 8 }}>Invoices</div>
+
+        {orders.map((o, i) => {
+          const isSel = selected.includes(o.id);
+          const isOldest = i === 0;
+          return (
+            <button key={o.id} onClick={() => !isOldest && toggle(o.id)} style={{
+              width: "100%", padding: "16px 18px", background: C.surface,
+              borderRadius: 16, border: `1.5px solid ${isSel ? C.accent + "40" : C.border}`,
+              cursor: isOldest ? "default" : "pointer", textAlign: "left", fontFamily: font,
+              marginBottom: 8, opacity: isSel ? 1 : 0.6, transition: "all .12s",
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ flex: 1 }}>
+                  {/* F6: won date + sum (same pattern as triage: title + sum) */}
+                  <div style={{ fontSize: 15, fontWeight: 600, color: C.text }}>Won {o.auction} · {o.total}</div>
+                  {/* F3: only deadline badge gets visual prominence */}
+                  <div style={{ marginTop: 6 }}>
+                    <DeadlineBadge daysLeft={o.daysLeft} />
+                  </div>
+                </div>
+                {/* F5: pre-checked disabled checkbox for oldest */}
+                <div style={{
+                  width: 22, height: 22, borderRadius: 6,
+                  background: isOldest ? C.textTer : isSel ? C.accent : C.border,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: "#fff", fontSize: 12, fontWeight: 700, transition: "all .1s",
+                  opacity: isOldest ? 0.5 : 1,
+                }}>{isSel ? "✓" : ""}</div>
+              </div>
+              {/* Item count card with type label */}
+              {isSel && (
+                <ItemCountCard
+                  itemCount={o.itemCount}
+                  onTap={(e) => { e?.stopPropagation?.(); onViewItems(o.items, `Won ${o.auction}`); }}
+                  onTapItem={(i) => onViewSingleItem(o.items, `Won ${o.auction}`, i)}
+                />
+              )}
+            </button>
+          );
+        })}
+
+        <div style={{ marginTop: 16 }}>
+          <Btn onClick={() => onNext({ selected: selOrders, totalItems, deadline: earliestDeadline })} disabled={selOrders.length === 0}>
+            Pick a time →
+          </Btn>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ═══════════════════════════════════════
+   SCREEN: DAY + TIME (merged, Ive version)
+   F8: only available days, calendar gap
+   F9: keep last day warning
+   F15: only available slots
+   F17: no "pickup by" on context line
+   F1: contextual rule (cutoff)
+   ═══════════════════════════════════════ */
+
+function DayTimeScreen({ selectionSummary, location, onBack, onBook, isReschedule, currentAppointment }) {
+  const days = getDays(location.id);
+  const firstApptDay = days.find(d => d.type === "appt" || d.type === "both");
+  const [selDayKey, setSelDayKey] = useState(firstApptDay?.key || days[0]?.key);
+  const [selSlot, setSelSlot] = useState(null);
+
+  const pickDay = (key) => { setSelDayKey(key); setSelSlot(null); };
+
+  const selDay = days.find(d => d.key === selDayKey);
+  const slots = getSlots(location.id, selDayKey);
+  const totalItems = selectionSummary?.totalItems || 1;
+  const cutoffHrs = totalItems <= 20 ? 1 : totalItems <= 100 ? 2 : 3;
+  const isWalkin = selDay?.type === "walkin";
+  const hasApptSlots = selDay?.type === "appt" || selDay?.type === "both";
+
+  return (
+    <>
+      <TopBar title="Pick a time" onBack={onBack} />
+      <div style={{ flex: 1, overflow: "auto", padding: "0 20px 40px" }}>
+        {!isReschedule && <Steps current={1} />}
+
+        {/* Reschedule context */}
+        {isReschedule && (
+          <div style={{ padding: "10px 14px", background: C.warnSoft, borderRadius: 10, marginBottom: 14, fontSize: 12, color: C.warn }}>
+            Currently booked: {currentAppointment.day} at {currentAppointment.time}
+          </div>
+        )}
+
+        {/* F17: removed "pickup by" — summary shows items + invoices only */}
+        <div style={{ padding: "10px 14px", background: C.surface, borderRadius: 10, border: `1px solid ${C.border}`, marginBottom: 14, fontSize: 13, color: C.textSec }}>
+          {selectionSummary?.totalItems || 0} items · {selectionSummary?.selected?.length || 0} invoice{(selectionSummary?.selected?.length || 0) !== 1 ? "s" : ""}
+        </div>
+
+        {/* F8: day pills — only available days, no slot count */}
+        <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+          {days.map(d => {
+            const active = selDayKey === d.key;
+            const tc = DayTypeColor(d.type);
+            return (
+              <button key={d.key} onClick={() => pickDay(d.key)} style={{
+                flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+                padding: "10px 4px", borderRadius: 14,
+                background: active ? C.accent : C.surface,
+                border: `1.5px solid ${active ? C.accent : C.border}`,
+                cursor: "pointer", fontFamily: font, transition: "all .12s",
+              }}>
+                <span style={{ fontSize: 10, fontWeight: 600, color: active ? "rgba(255,255,255,0.6)" : C.textTer, textTransform: "uppercase", letterSpacing: 0.3 }}>{d.label}</span>
+                <span style={{ fontSize: 22, fontWeight: 800, color: active ? "#fff" : C.text, lineHeight: 1 }}>{d.date}</span>
+                {d.isDeadline && <span style={{ width: 14, height: 2, borderRadius: 1, background: active ? "#fff" : C.danger, marginTop: 3 }} />}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Panel header: type + hours */}
+        {selDay && (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, padding: "0 2px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: DayTypeColor(selDay.type).c }} />
+              <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{selDay.tag}</span>
+            </div>
+            <span style={{ fontSize: 12, color: C.textTer }}>{selDay.hours}</span>
+          </div>
+        )}
+
+        {/* F9: last day warning */}
+        {selDay?.isDeadline && (
+          <div style={{ padding: "10px 14px", background: C.dangerSoft, borderRadius: 10, marginBottom: 12, fontSize: 12, fontWeight: 600, color: C.danger }}>
+            Last day to pick up these items
+          </div>
+        )}
+
+        {/* Walk-in info (compact) */}
+        {isWalkin && (
+          <div style={{ padding: "18px", background: C.liveSoft, borderRadius: 16, marginBottom: 12 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 4 }}>No appointment needed</div>
+            <div style={{ fontSize: 13, color: C.textSec, lineHeight: 1.5 }}>
+              Come during hours. Scan QR at entrance, join queue.
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 10, fontSize: 12, color: C.textTer }}>
+              <span>📍 {location.name}</span>
+            </div>
+            <div style={{ fontSize: 12, color: C.textTer, marginTop: 4 }}>Bring a valid photo ID.</div>
+          </div>
+        )}
+
+        {/* "Both" day: walk-in note */}
+        {selDay?.type === "both" && (
+          <div style={{ fontSize: 12, color: C.live, marginBottom: 10, padding: "0 2px" }}>
+            Walk-in also available during hours. No appointment needed.
+          </div>
+        )}
+
+        {/* F1: cutoff rule */}
+        {hasApptSlots && (
+          <div style={{ fontSize: 12, color: C.textTer, marginBottom: 10, padding: "0 2px" }}>
+            {totalItems} items require booking at least {cutoffHrs}hr ahead.
+          </div>
+        )}
+
+        {/* F15: only available slots */}
+        {hasApptSlots && slots.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            {slots.map((s, i) => {
+              const isSel = selSlot === i;
+              const isCurrent = isReschedule && currentAppointment && selDay?.full === currentAppointment.day && s.time === currentAppointment.time;
+              return (
+                <button key={i} onClick={() => setSelSlot(i)} style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  padding: "13px 16px", borderRadius: 13,
+                  background: isSel ? C.accentSoft : isCurrent ? C.warnSoft : C.surface,
+                  border: `1.5px solid ${isSel ? C.accent : isCurrent ? C.warn + "60" : C.border}`,
+                  cursor: "pointer", fontFamily: font, transition: "all .1s",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 15, fontWeight: 600, color: isSel ? C.accent : C.text }}>{s.time}</span>
+                    {isCurrent && <span style={{ fontSize: 10, fontWeight: 700, color: C.warn, background: `${C.warn}18`, padding: "2px 7px", borderRadius: 5 }}>Current</span>}
+                  </div>
+                  {isSel && <div style={{ width: 20, height: 20, borderRadius: 6, background: C.accent, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 11, fontWeight: 700 }}>✓</div>}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* v4: no slots message — deadline-aware */}
+        {hasApptSlots && slots.length === 0 && (() => {
+          const deadlineDaysLeft = selectionSummary?.deadline?.daysLeft || 0;
+          const showMidnightMessage = deadlineDaysLeft > 1;
+          return (
+            <div style={{ padding: "20px", background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, textAlign: "center" }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 4 }}>No available slots</div>
+              {showMidnightMessage
+                ? <div style={{ fontSize: 12, color: C.textSec }}>New slots available after 12:00 AM.</div>
+                : <div style={{ fontSize: 12, color: C.textSec }}>All slots are booked for this day.</div>
+              }
+            </div>
+          );
+        })()}
+
+        {hasApptSlots && slots.length > 0 && (
+          <div style={{ marginTop: 20 }}>
+            <Btn onClick={() => onBook({ time: slots[selSlot]?.time, day: selDay })} disabled={selSlot === null}>
+              {selSlot !== null ? `Book ${slots[selSlot]?.time} →` : "Select a time"}
+            </Btn>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+/* ═══════════════════════════════════════
+   SCREEN: CONFIRMATION
+   F18: arrival rule
+   F1: contextual sentence (ID)
+   ═══════════════════════════════════════ */
+
+function ConfirmScreen({ booking, location, onDone }) {
+  const [cal, setCal] = useState(false);
+  return (
+    <>
+      <div style={{ flex: 1, overflow: "auto", padding: "0 20px 40px" }}>
+        <div style={{ padding: "44px 24px 32px", textAlign: "center" }}>
+          <div style={{ width: 64, height: 64, borderRadius: 20, background: C.successSoft, margin: "0 auto 16px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, color: C.success, fontWeight: 800 }}>✓</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: C.text, letterSpacing: -0.6 }}>You're all set</div>
+          <div style={{ fontSize: 14, color: C.textSec, marginTop: 6 }}>{booking.day.full} at {booking.time}</div>
+        </div>
+
+        <div style={{ padding: "20px", background: C.surface, borderRadius: 18, border: `1px solid ${C.border}`, marginBottom: 14 }}>
+          <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 14 }}>
+            <Icon.MapPin size={20} color={C.textSec} />
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{location.name}</div>
+              <div style={{ fontSize: 12, color: C.textSec }}>{location.address}</div>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 14 }}>
+            <Icon.Package size={20} color={C.textSec} />
+            <span style={{ fontSize: 14, color: C.text }}>{booking.totalItems} items · {booking.selected.length} invoice{booking.selected.length > 1 ? "s" : ""}</span>
+          </div>
+          <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 14 }}>
+            <Icon.IdCard size={20} color={C.textSec} />
+            {/* F1: contextual sentence */}
+            <span style={{ fontSize: 13, color: C.textSec }}>Bring a valid photo ID.</span>
+          </div>
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <Icon.Clock size={20} color={C.textSec} />
+            {/* F18: arrival rule */}
+            <span style={{ fontSize: 13, color: C.textSec }}>Please arrive on time. 45-min grace period if you're running late.</span>
+          </div>
+        </div>
+
+        {/* v4: tappable map card */}
+        <MapCard location={location} />
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+          {[
+            { icon: Icon.CalendarPlus, label: cal ? "Added to calendar ✓" : "Add to calendar", active: cal, action: () => setCal(true) },
+            { icon: Icon.UsersThree, label: "Can't make it? Send to someone" },
+            { icon: Icon.Receipt, label: "View invoices" },
+          ].map((a, i) => (
+            <button key={i} onClick={a.action} style={{
+              width: "100%", padding: "14px 18px", borderRadius: 14,
+              background: a.active ? C.successSoft : C.surface,
+              border: `1.5px solid ${a.active ? C.success : C.border}`,
+              cursor: "pointer", fontFamily: font, display: "flex", alignItems: "center", gap: 12, transition: "all .15s",
+            }}>
+              <a.icon size={18} color={a.active ? C.success : C.textSec} />
+              <span style={{ fontSize: 13, fontWeight: 600, color: a.active ? C.success : C.text }}>{a.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <div style={{ marginTop: 20 }}><Btn onClick={onDone}>Done</Btn></div>
+      </div>
+    </>
+  );
+}
+
+/* ═══════════════════════════════════════
+   SCREEN: SCHEDULED STATE (return view)
+   Restored from v2. F13: item count card added.
+   F11: Reschedule taps into scheduling flow.
+   ═══════════════════════════════════════ */
+
+function ScheduledScreen({ appointment, onReschedule, onBack, onViewItems, onViewSingleItem, onCancel }) {
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [canceling, setCanceling] = useState(false);
+
+  const handleConfirmCancel = () => {
+    setShowCancelConfirm(false);
+    setCanceling(true);
+    setTimeout(() => {
+      onCancel();
+    }, 2000);
+  };
+
+  if (canceling) {
+    return (
+      <>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 40px" }}>
+          <div style={{ width: 64, height: 64, borderRadius: 20, background: C.dangerSoft, margin: "0 auto 20px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 24, height: 24, border: `3px solid ${C.danger}`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+          </div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: C.text, letterSpacing: -0.4, marginBottom: 8, textAlign: "center" }}>Canceling appointment</div>
+          <div style={{ fontSize: 14, color: C.textSec, textAlign: "center", lineHeight: 1.5 }}>
+            {appointment.day} at {appointment.time}<br/>{appointment.location}
+          </div>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <TopBar title="Your appointment" onBack={onBack} />
+      <div style={{ flex: 1, overflow: "auto", padding: "0 20px 40px" }}>
+        <div style={{ padding: "24px", background: C.surface, borderRadius: 20, border: `1.5px solid ${C.accent}40`, marginBottom: 20 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: C.accent, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>Upcoming</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: C.text, letterSpacing: -0.4 }}>{appointment.day} at {appointment.time}</div>
+          <div style={{ fontSize: 14, color: C.textSec, marginTop: 6, marginBottom: 4 }}>{appointment.location}</div>
+          <ItemCountCard
+            itemCount={appointment.items}
+            onTap={() => onViewItems(appointment.itemsList || [], `${appointment.items} items`)}
+            onTapItem={(i) => onViewSingleItem(appointment.itemsList || [], `${appointment.items} items`, i)}
+          />
+        </div>
+
+        {/* v4: tappable map card */}
+        <MapCard location={{ name: appointment.location, address: appointment.address }} />
+
+        <div style={{ padding: "18px", background: C.surface, borderRadius: 16, border: `1px solid ${C.border}`, marginBottom: 16 }}>
+          <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
+            <Icon.Clock size={18} color={C.textSec} />
+            <span style={{ fontSize: 13, color: C.textSec }}>Arrive on time. 45-min grace period if late.</span>
+          </div>
+          <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
+            <Icon.IdCard size={18} color={C.textSec} />
+            <span style={{ fontSize: 13, color: C.textSec }}>Bring a valid photo ID.</span>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ flex: 1 }}><Btn variant="outline" onClick={onReschedule} small>Reschedule</Btn></div>
+          <div style={{ flex: 1 }}><Btn variant="outline" onClick={() => setShowCancelConfirm(true)} small><span style={{ color: C.danger }}>Cancel</span></Btn></div>
+        </div>
+      </div>
+
+      {/* Cancel confirmation popup */}
+      {showCancelConfirm && (
+        <div style={{
+          position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)",
+          display: "flex", alignItems: "flex-end", justifyContent: "center",
+          zIndex: 100, padding: "0 16px 40px",
+        }} onClick={() => setShowCancelConfirm(false)}>
+          <div onClick={e => e.stopPropagation()} style={{
+            width: "100%", background: C.surface, borderRadius: 24, padding: "28px 24px",
+            boxShadow: "0 -8px 40px rgba(0,0,0,0.15)",
+          }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 8, letterSpacing: -0.3 }}>Cancel appointment?</div>
+            <div style={{ fontSize: 14, color: C.textSec, lineHeight: 1.5, marginBottom: 6 }}>
+              {appointment.day} at {appointment.time}
+            </div>
+            <div style={{ fontSize: 14, color: C.textSec, lineHeight: 1.5, marginBottom: 20 }}>
+              {appointment.location} · {appointment.items} items
+            </div>
+            <div style={{ fontSize: 13, color: C.danger, lineHeight: 1.5, marginBottom: 24, padding: "12px 14px", background: C.dangerSoft, borderRadius: 12 }}>
+              You will need to schedule a new appointment to pick up your items. Pickup deadlines still apply.
+            </div>
+            <Btn variant="danger" onClick={handleConfirmCancel}>Yes, cancel appointment</Btn>
+            <div style={{ height: 8 }} />
+            <Btn variant="outline" onClick={() => setShowCancelConfirm(false)}>Keep appointment</Btn>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+/* ═══════════════════════════════════════
+   ANNOTATIONS — v3 notes per screen
+   ═══════════════════════════════════════ */
+
+function ScreenLabel({ step }) {
+  const L = {
+    triage: { n: "01", t: "Triage", d: "One glance: what needs attention? Payment issues surface first (blocking), then schedulable orders grouped by location." },
+    payment: { n: "—", t: "Fix Payment", d: "What went wrong, what's at risk, and one action to fix it. Card number in the error, amount in the details, card on the button. No repeated info." },
+    items: { n: "—", t: "Item List", d: "Full item list with large thumbnails. Tap any item to see its auction page. Reusable — opened from any item count card across the app." },
+    orders: { n: "02", t: "Select Invoices", d: "Which wins are you picking up? Oldest invoice is always included. Check or uncheck newer ones — summary and calendar adapt instantly." },
+    daytime: { n: "03", t: "Day + Time", d: "Pick a day, then a time. Only available days and slots shown. If slots haven't opened yet, the app explains when they will." },
+    done: { n: "04", t: "Confirmation", d: "You're booked. Map with directions, calendar add, delegation option, invoice access. Arrive on time — 45-min grace period if late." },
+    scheduled: { n: "05", t: "Return State", d: "Coming back to check your appointment. Map for directions, items for reference. Reschedule or cancel from here." },
+  };
+  const l = L[step] || L.triage;
+  return (
+    <div style={{ width: 220, padding: "0 28px", display: "flex", flexDirection: "column", justifyContent: "center", fontFamily: font }}>
+      <div style={{ fontSize: 56, fontWeight: 800, color: "#E2E8F0", letterSpacing: -3, lineHeight: 1, marginBottom: 6 }}>{l.n}</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: "#020817", marginBottom: 8, letterSpacing: -0.3 }}>{l.t}</div>
+      <div style={{ fontSize: 12, color: "#64748B", lineHeight: 1.6 }}>{l.d}</div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════
+   APP — v3 routing
+   F11: no separate reschedule screen
+   ═══════════════════════════════════════ */
+
+function App() {
+  const [screen, setScreen] = useState("triage");
+  const [ctx, setCtx] = useState({});
+  const [showNotes, setShowNotes] = useState(true);
+  /* Per-location appointments: { locId: { day, time, location, address, items, auctions, itemsList, locId } } */
+  const [appointments, setAppointments] = useState({});
+
+  useEffect(() => {
+    const h = e => { if (e.key === "n" || e.key === "N") setShowNotes(a => !a); };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, []);
+
+  const go = (s, data) => { setScreen(s); setCtx(data || {}); };
+
+  const handleTapOrder = (o) => {
+    if (o.status === "failed") go("payment", { order: o });
+    else if (o.type === "schedule") {
+      /* Block if appointment already exists for this location */
+      if (appointments[o.location.id]) {
+        go("scheduled", { apptLocId: o.location.id });
+        return;
+      }
+      go("orders", { scheduleData: o });
+    }
+  };
+
+  const handleViewItems = (items, title) => {
+    go("items", { itemList: items, itemListTitle: title, returnScreen: screen, prevCtx: ctx });
+  };
+
+  const handleViewSingleItem = (items, title, index) => {
+    go("item", { singleItem: items[index], singleItemIndex: index, returnScreen: screen, prevCtx: ctx });
+  };
+
+  /* F11: reschedule reuses the scheduling flow with locked invoices */
+  const handleReschedule = (locId) => {
+    const appt = appointments[locId];
+    if (!appt) return;
+    const loc = Object.values(LOCATIONS).find(l => l.name === appt.location);
+    if (!loc) return;
+    const paidAtLoc = ALL_ORDERS.filter(o => o.status === "paid" && o.location.id === loc.id);
+    const totalItems = paidAtLoc.reduce((s, o) => s + o.itemCount, 0);
+    go("daytime", {
+      selection: { selected: paidAtLoc, totalItems, deadline: paidAtLoc[0] },
+      location: loc,
+      isReschedule: true,
+      currentAppointment: appt,
+      apptLocId: locId,
+    });
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#F1F5F9", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: font, padding: "40px 0" }}>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+      <div style={{ width: showNotes ? 220 : 0, opacity: showNotes ? 1 : 0, overflow: "hidden", transition: "all .35s cubic-bezier(.4,0,.2,1)", flexShrink: 0 }}>
+        <ScreenLabel step={screen} />
+      </div>
+
+      <Phone>
+        {screen === "triage" && (
+          <TriageScreen
+            onTapOrder={handleTapOrder}
+            appointments={appointments}
+            onTapAppointment={(locId) => go("scheduled", { apptLocId: locId })}
+            onViewItems={handleViewItems}
+            onViewSingleItem={handleViewSingleItem}
+          />
+        )}
+        {screen === "payment" && (
+          <PaymentScreen
+            order={ctx.order}
+            onBack={() => go("triage")}
+            onViewItems={handleViewItems}
+            onViewSingleItem={handleViewSingleItem}
+          />
+        )}
+        {screen === "items" && (
+          <ItemListScreen
+            items={ctx.itemList || []}
+            title={ctx.itemListTitle}
+            onBack={() => { setScreen(ctx.returnScreen || "triage"); setCtx(ctx.prevCtx || {}); }}
+            onViewSingleItem={(i) => {
+              const items = ctx.itemList || [];
+              go("item", { singleItem: items[i], singleItemIndex: i, returnScreen: "items", prevCtx: ctx });
+            }}
+          />
+        )}
+        {screen === "item" && ctx.singleItem && (
+          <SingleItemScreen
+            item={ctx.singleItem}
+            itemIndex={ctx.singleItemIndex}
+            onBack={() => { setScreen(ctx.returnScreen || "triage"); setCtx(ctx.prevCtx || {}); }}
+          />
+        )}
+        {screen === "orders" && (
+          <OrderSelectScreen
+            data={ctx.scheduleData}
+            onBack={() => go("triage")}
+            onNext={(sel) => go("daytime", { selection: sel, location: ctx.scheduleData.location, scheduleData: ctx.scheduleData })}            onViewItems={handleViewItems}
+            onViewSingleItem={handleViewSingleItem}
+          />
+        )}
+        {screen === "daytime" && (
+          <DayTimeScreen
+            selectionSummary={ctx.selection}
+            location={ctx.location}
+            onBack={() => {
+              if (ctx.isReschedule) go("scheduled", { apptLocId: ctx.apptLocId || ctx.location?.id });
+              else go("orders", { scheduleData: ctx.scheduleData || { location: ctx.location, orders: ALL_ORDERS.filter(o => o.status === "paid" && o.location.id === ctx.location?.id) } });
+            }}
+            onBook={(booking) => go("done", { ...ctx, booking: { ...booking, ...ctx.selection } })}
+            isReschedule={ctx.isReschedule}
+            currentAppointment={ctx.currentAppointment}
+          />
+        )}
+        {screen === "done" && (
+          <ConfirmScreen
+            booking={ctx.booking}
+            location={ctx.location}
+            onDone={() => {
+              const allItems = ctx.booking.selected.flatMap(o => o.items);
+              const locId = ctx.location.id;
+              const selectedIds = ctx.booking.selected.map(o => o.id);
+              setAppointments(prev => ({
+                ...prev,
+                [locId]: {
+                  day: ctx.booking.day.full,
+                  time: ctx.booking.time,
+                  location: ctx.location.name,
+                  address: ctx.location.address,
+                  items: ctx.booking.totalItems,
+                  auctions: ctx.booking.selected.length,
+                  itemsList: allItems,
+                  locId,
+                  selectedOrderIds: selectedIds,
+                },
+              }));
+              go("triage");
+            }}
+          />
+        )}
+        {screen === "scheduled" && ctx.apptLocId && appointments[ctx.apptLocId] && (
+          <ScheduledScreen
+            appointment={appointments[ctx.apptLocId]}
+            onBack={() => go("triage")}
+            onReschedule={() => handleReschedule(ctx.apptLocId)}
+            onViewItems={handleViewItems}
+            onViewSingleItem={handleViewSingleItem}
+            onCancel={() => {
+              setAppointments(prev => {
+                const next = { ...prev };
+                delete next[ctx.apptLocId];
+                return next;
+              });
+              go("triage");
+            }}
+          />
+        )}
+      </Phone>
+
+      <div style={{ width: showNotes ? 200 : 0, opacity: showNotes ? 1 : 0, overflow: "hidden", transition: "all .35s cubic-bezier(.4,0,.2,1)", flexShrink: 0 }}>
+        <div style={{ width: 200, padding: "0 24px", fontFamily: font }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>v4 changes</div>
+          <div style={{ fontSize: 12, color: "#64748B", lineHeight: 1.7 }}>
+            ✓ Map card on confirmation<br/>
+            ✓ Map card on return state<br/>
+            ✓ $ amount on pending card<br/>
+            ✓ Card *6461 in error message<br/>
+            ✓ "Retry with *6461" button<br/>
+            ✓ No repeated amount on Fix Payment<br/>
+            ✓ No-slots msg deadline-aware<br/>
+            ✓ Mon 16 empty (rolling window)<br/>
+            ✓ Thumbnails fill available width<br/>
+            ✓ +X count + chevron to full list<br/>
+            <br/>
+            <span style={{ fontSize: 10, color: "#94A3B8" }}>Press N to toggle notes</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
