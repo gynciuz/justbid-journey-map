@@ -336,7 +336,7 @@ function ItemListScreen({ items, title, onBack, onViewSingleItem }) {
   return (
     <>
       <TopBar title={title || "Items"} onBack={onBack} />
-      <div style={{ flex: 1, overflow: "auto", padding: "0 20px 40px" }}>
+      <div style={{ flex: 1, overflow: "auto", padding: "0 20px 40px", background: C.surface }}>
         <div style={{ fontSize: 12, color: C.textTer, marginBottom: 12 }}>Tap an item to view auction details.</div>
         {items.map((it, i) => (
           <button key={i} onClick={() => onViewSingleItem(i)} style={{
@@ -369,7 +369,7 @@ function SingleItemScreen({ item, itemIndex, onBack }) {
   return (
     <>
       <TopBar title="Auction detail" onBack={onBack} />
-      <div style={{ flex: 1, overflow: "auto", padding: "0 20px 40px" }}>
+      <div style={{ flex: 1, overflow: "auto", padding: "0 20px 40px", background: C.surface }}>
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 20, marginTop: 20 }}>
           <Thumb size={120} index={itemIndex || 0} />
         </div>
